@@ -14,21 +14,39 @@ export default function SignupForm() {
     <form action={formAction} className="mt-8 space-y-4">
       <div className="space-y-2">
         <Label htmlFor="orgName">Organization name</Label>
-        <Input id="orgName" name="orgName" required placeholder="Acme Bank Ltd" />
+        <Input
+          id="orgName"
+          name="orgName"
+          required
+          defaultValue="Acme Bank Ltd"
+        />
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <Label htmlFor="name">Your name</Label>
-          <Input id="name" name="name" placeholder="Priya Shah" />
+          <Input id="name" name="name" defaultValue="Priya Shah" />
         </div>
         <div className="space-y-2">
           <Label htmlFor="email">Work email</Label>
-          <Input id="email" name="email" type="email" required placeholder="you@company.com" />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            required
+            defaultValue="priya@acme.demo"
+          />
         </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" required minLength={6} />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          required
+          minLength={6}
+          defaultValue="demo1234"
+        />
       </div>
       {state?.error ? (
         <Alert variant="destructive">
@@ -39,8 +57,7 @@ export default function SignupForm() {
         {pending ? "Creating…" : "Create workspace"}
       </Button>
       <p className="text-xs text-muted-foreground">
-        By creating an account you agree to our Ethical Simulation Principles and confirm that you have
-        authority to enroll your organization&apos;s employees.
+        Demo workspace pre-filled — hit create and you&apos;re in.
       </p>
     </form>
   );

@@ -14,11 +14,23 @@ export default function LoginForm() {
     <form action={formAction} className="mt-8 space-y-4">
       <div className="space-y-2">
         <Label htmlFor="email">Work email</Label>
-        <Input id="email" name="email" type="email" required placeholder="you@company.com" />
+        <Input
+          id="email"
+          name="email"
+          type="email"
+          required
+          defaultValue="admin@acme.demo"
+        />
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" required />
+        <Input
+          id="password"
+          name="password"
+          type="password"
+          required
+          defaultValue="demo1234"
+        />
       </div>
       {state?.error ? (
         <Alert variant="destructive">
@@ -28,6 +40,9 @@ export default function LoginForm() {
       <Button type="submit" className="w-full" size="lg" disabled={pending}>
         {pending ? "Signing in…" : "Sign in"}
       </Button>
+      <p className="text-center text-xs text-slate-400">
+        Demo workspace pre-filled — just hit sign in.
+      </p>
     </form>
   );
 }
