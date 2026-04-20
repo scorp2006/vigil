@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { getSession } from "@/lib/session";
-import { db } from "@/lib/db";
-import { logout } from "@/app/actions/auth";
+import { requireOrg } from "@/lib/session";
 import { Button } from "@/components/ui/button";
+
+export const dynamic = "force-dynamic";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   ShieldCheckIcon,
@@ -28,12 +27,7 @@ const NAV = [
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
-  if (!session) redirect("/login");
-
-  const org = await db.org.findUnique({ where: { id: session.orgId } });
-  if (!org) redirect("/login");
-
+  const { org, session } = await requireOrg();
   const initial = (session.name || session.email || "?")[0]?.toUpperCase() ?? "?";
 
   return (
@@ -82,9 +76,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
               <p className="truncate text-xs font-semibold text-slate-800">{session.name || "Admin"}</p>
               <p className="truncate text-xs text-slate-400">{session.email}</p>
             </div>
-            <form action={logout}>
+            <Link href="/">
               <Button
-                type="submit"
                 size="icon"
                 variant="ghost"
                 aria-label="Sign out"
@@ -92,7 +85,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               >
                 <LogOutIcon className="h-3.5 w-3.5" />
               </Button>
-            </form>
+            </Link>
           </div>
         </div>
       </aside>
