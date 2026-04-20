@@ -1,61 +1,38 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import bcrypt from "bcryptjs";
-import { db } from "@/lib/db";
 import { createSession, destroySession } from "@/lib/session";
-
-function slugify(s: string) {
-  return (
-    s
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 40) || "org"
-  );
-}
 
 export type AuthState = { error?: string } | undefined;
 
-export async function signupAction(_prev: AuthState, formData: FormData): Promise<AuthState> {
-  const orgName = String(formData.get("orgName") || "").trim();
-  const name = String(formData.get("name") || "").trim();
-  const email = String(formData.get("email") || "").trim().toLowerCase();
-  const password = String(formData.get("password") || "");
+// ── DEMO MODE ────────────────────────────────────────────────────────
+// For the POC we skip real auth. Any of these credentials work, and
+// signup just drops the visitor into the seeded demo tenant as admin.
+// ─────────────────────────────────────────────────────────────────────
+const DEMO_CREDENTIALS = [
+  { email: "admin@acme.demo", password: "demo1234" },
+  { email: "demo@vigil.app", password: "demo" },
+  { email: "admin", password: "admin" },
+];
 
-  if (!orgName || !email || !password || password.length < 6) {
-    return { error: "All fields required, password 6+ chars." };
-  }
+// Stable demo identifiers. The dashboard will resolve the matching Org
+// row on first authenticated request (see session.ts requireOrg).
+const DEMO_USER_ID = "demo-user";
+const DEMO_ORG_ID = "demo-org";
+const DEMO_EMAIL = "admin@acme.demo";
+const DEMO_NAME = "Demo Admin";
 
-  const existing = await db.user.findUnique({ where: { email } });
-  if (existing) return { error: "An account with that email already exists." };
-
-  const slug = `${slugify(orgName)}-${Math.random().toString(36).slice(2, 6)}`;
-  const passwordHash = await bcrypt.hash(password, 10);
-
-  const org = await db.org.create({
-    data: {
-      name: orgName,
-      slug,
-      users: {
-        create: {
-          email,
-          name: name || null,
-          password: passwordHash,
-          role: "admin",
-        },
-      },
-    },
-    include: { users: true },
-  });
-
-  const user = org.users[0];
+async function logInAsDemo() {
   await createSession({
-    userId: user.id,
-    orgId: org.id,
-    email: user.email,
-    name: user.name ?? undefined,
+    userId: DEMO_USER_ID,
+    orgId: DEMO_ORG_ID,
+    email: DEMO_EMAIL,
+    name: DEMO_NAME,
   });
+}
+
+export async function signupAction(_prev: AuthState, _formData: FormData): Promise<AuthState> {
+  await logInAsDemo();
   redirect("/dashboard");
 }
 
@@ -63,17 +40,13 @@ export async function loginAction(_prev: AuthState, formData: FormData): Promise
   const email = String(formData.get("email") || "").trim().toLowerCase();
   const password = String(formData.get("password") || "");
 
-  const user = await db.user.findUnique({ where: { email } });
-  if (!user) return { error: "Invalid credentials." };
-  const ok = await bcrypt.compare(password, user.password);
-  if (!ok) return { error: "Invalid credentials." };
-
-  await createSession({
-    userId: user.id,
-    orgId: user.orgId,
-    email: user.email,
-    name: user.name ?? undefined,
-  });
+  const matches = DEMO_CREDENTIALS.some(
+    (c) => c.email.toLowerCase() === email && c.password === password,
+  );
+  if (!matches) {
+    return { error: "Try admin@acme.demo / demo1234" };
+  }
+  await logInAsDemo();
   redirect("/dashboard");
 }
 
