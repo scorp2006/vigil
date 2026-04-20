@@ -1,0 +1,168 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Org {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  region    String   @default("IN")
+  createdAt DateTime @default(now())
+
+  users      User[]
+  employees  Employee[]
+  groups     Group[]
+  campaigns  Campaign[]
+  templates  Template[]
+  lmsConfig  LmsConfig?
+  apiKeys    ApiKey[]
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      String   @default("admin")
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Employee {
+  id         String   @id @default(cuid())
+  orgId      String
+  org        Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  email      String
+  name       String
+  phone      String?
+  department String?
+  groupId    String?
+  group      Group?   @relation(fields: [groupId], references: [id])
+  consent    Boolean  @default(false)
+  consentAt  DateTime?
+  locale     String   @default("en")
+  createdAt  DateTime @default(now())
+
+  events    Event[]
+  riskScore RiskScore?
+
+  @@unique([orgId, email])
+  @@index([orgId])
+}
+
+model Group {
+  id        String     @id @default(cuid())
+  orgId     String
+  org       Org        @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  employees Employee[]
+  createdAt DateTime   @default(now())
+}
+
+model Template {
+  id                 String   @id @default(cuid())
+  orgId              String
+  org                Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name               String
+  channel            String
+  category           String
+  locale             String   @default("en")
+  subject            String?
+  fromName           String?
+  fromEmail          String?
+  bodyHtml           String?
+  landingHtml        String?
+  voiceScript        String?
+  voicePersona       String?
+  trainingModuleJson String?
+  generatedBy        String   @default("seed")
+  createdAt          DateTime @default(now())
+
+  campaigns Campaign[]
+}
+
+model Campaign {
+  id          String   @id @default(cuid())
+  orgId       String
+  org         Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name        String
+  channel     String
+  status      String   @default("draft")
+  templateId  String?
+  template    Template? @relation(fields: [templateId], references: [id])
+  targetJson  String
+  scheduledAt DateTime?
+  launchedAt  DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  events Event[]
+}
+
+model Event {
+  id         String    @id @default(cuid())
+  orgId      String
+  campaignId String?
+  campaign   Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  type       String
+  channel    String
+  meta       String?
+  createdAt  DateTime  @default(now())
+
+  @@index([employeeId])
+  @@index([campaignId])
+  @@index([orgId, createdAt])
+}
+
+model RiskScore {
+  employeeId  String   @id
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  score       Float    @default(0)
+  band        String   @default("low")
+  weakAreas   String   @default("[]")
+  lastEventAt DateTime?
+  updatedAt   DateTime @updatedAt
+}
+
+model LmsConfig {
+  id           String   @id @default(cuid())
+  orgId        String   @unique
+  org          Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  lrsEndpoint  String?
+  lrsAuth      String?
+  scormVersion String   @default("2004")
+  createdAt    DateTime @default(now())
+}
+
+model ApiKey {
+  id        String   @id @default(cuid())
+  orgId     String
+  org       Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name      String
+  keyHash   String   @unique
+  lastUsed  DateTime?
+  createdAt DateTime @default(now())
+}
+
+model TrackToken {
+  id         String   @id
+  orgId      String
+  campaignId String
+  employeeId String
+  createdAt  DateTime @default(now())
+
+  @@index([campaignId])
+  @@index([employeeId])
+}
