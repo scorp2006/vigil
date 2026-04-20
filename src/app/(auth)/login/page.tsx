@@ -1,7 +1,11 @@
 import Link from "next/link";
 import LoginForm from "./form";
+import { ensureSeeded } from "@/lib/bootstrap";
 
-export default function LoginPage() {
+export const dynamic = "force-dynamic";
+
+export default async function LoginPage() {
+  await ensureSeeded();
   return (
     <div>
       <div className="mb-8">

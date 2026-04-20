@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ensureSeeded } from "@/lib/bootstrap";
 import {
   ShieldCheckIcon,
   PhoneCallIcon,
@@ -14,7 +15,10 @@ import {
   ZapIcon,
 } from "lucide-react";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  await ensureSeeded();
   return (
     <div className="min-h-screen bg-white">
       {/* ── NAV ─────────────────────────────────────────────────── */}
