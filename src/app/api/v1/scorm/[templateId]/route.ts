@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ templateId:
   const token = auth.replace(/^Bearer\s+/i, "").trim();
   if (!token) return new Response("missing bearer", { status: 401 });
 
-  const keyHash = hashApiKey(token);
+  const keyHash = await hashApiKey(token);
   const key = await db.apiKey.findUnique({ where: { keyHash } });
   if (!key) return new Response("invalid api key", { status: 401 });
 

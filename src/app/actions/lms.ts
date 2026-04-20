@@ -9,7 +9,7 @@ export async function createApiKey(name: string) {
   const { org } = await requireOrg();
   const key = "vgl_" + randomId(18);
   await db.apiKey.create({
-    data: { orgId: org.id, name: name || "LMS key", keyHash: hashApiKey(key) },
+    data: { orgId: org.id, name: name || "LMS key", keyHash: await hashApiKey(key) },
   });
   revalidatePath("/lms");
   return { key };

@@ -8,7 +8,7 @@ async function main() {
   if (!org) throw new Error("run seed first");
   const key = "vgl_" + randomId(18);
   await db.apiKey.create({
-    data: { orgId: org.id, name: "smoke-test", keyHash: hashApiKey(key) },
+    data: { orgId: org.id, name: "smoke-test", keyHash: await hashApiKey(key) },
   });
   console.log("Key:", key);
   const emp = await db.employee.findFirst({ where: { orgId: org.id } });

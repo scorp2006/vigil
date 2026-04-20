@@ -19,7 +19,7 @@ export type SessionData = {
 };
 
 export async function createSession(data: SessionData) {
-  const token = signToken(data);
+  const token = await signToken(data);
   const store = await cookies();
   store.set(COOKIE, token, {
     httpOnly: true,
@@ -38,7 +38,7 @@ export async function destroySession() {
 export async function getSession(): Promise<SessionData | null> {
   const store = await cookies();
   const token = store.get(COOKIE)?.value;
-  return verifyToken<SessionData>(token);
+  return await verifyToken<SessionData>(token);
 }
 
 export async function requireSession(): Promise<SessionData> {

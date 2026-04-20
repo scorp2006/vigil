@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifyToken } from "@/lib/crypto";
 
-export function proxy(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const protectedPrefix = ["/dashboard", "/campaigns", "/employees", "/templates", "/settings", "/risk", "/lms"];
@@ -10,7 +10,7 @@ export function proxy(request: NextRequest) {
   if (!isProtected) return NextResponse.next();
 
   const token = request.cookies.get("vigil_session")?.value;
-  const session = verifyToken(token);
+  const session = await verifyToken(token);
   if (!session) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
