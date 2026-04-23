@@ -4,6 +4,7 @@ import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
 import { ArrowLeftIcon, FlagIcon, GraduationCapIcon } from "lucide-react";
+import { LaunchButton } from "./launch-button";
 
 const EVENT_TONE: Record<string, string> = {
   sent: "bg-page text-ink-2",
@@ -48,11 +49,14 @@ export default async function CampaignDetail({ params }: { params: Promise<{ id:
     <>
       <PageHeader
         title={campaign.name}
-        description={`${campaign.channel} · ${campaign.template?.category?.replaceAll("_", " ") ?? "—"}`}
+        description={`${campaign.channel} · ${campaign.template?.category?.replaceAll("_", " ") ?? "—"} · ${campaign.status}`}
         actions={
-          <Link href="/campaigns" className="pill-btn">
-            <ArrowLeftIcon className="h-3.5 w-3.5" /> Back to campaigns
-          </Link>
+          <>
+            {campaign.status === "scheduled" ? <LaunchButton campaignId={campaign.id} /> : null}
+            <Link href="/campaigns" className="pill-btn">
+              <ArrowLeftIcon className="h-3.5 w-3.5" /> Back to campaigns
+            </Link>
+          </>
         }
       />
       <PageBody>
