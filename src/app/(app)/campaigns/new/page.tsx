@@ -20,7 +20,7 @@ export default async function NewCampaignPage({
     mode === "vishing" ? "voice" : mode === "multi" ? "multi" : "email";
 
   return (
-    <div>
+    <>
       <PageHeader
         title="New campaign"
         description="Describe the scenario in plain English. Vigil composes the email, landing page, voice script, and training module."
@@ -28,6 +28,6 @@ export default async function NewCampaignPage({
       <PageBody>
         <Composer employees={employees} defaultChannel={defaultChannel} />
       </PageBody>
-    </div>
+    </>
   );
 }

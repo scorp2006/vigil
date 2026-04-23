@@ -11,64 +11,63 @@ export default async function TemplatesPage() {
   });
 
   return (
-    <div className="bg-slate-50/50">
+    <>
       <PageHeader
         title="Templates"
         description="Every scenario generated or seeded in your workspace. Reuse in new campaigns."
       />
       <PageBody>
         {templates.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-400">
+          <p className="py-10 text-center text-sm text-ink-3">
             No templates yet. Compose a campaign to create one.
           </p>
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {templates.map((t) => (
-              <div
-                key={t.id}
-                className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-shadow hover:shadow-md"
-              >
-                <div className="border-b border-slate-100 bg-slate-50 px-5 py-3.5 flex items-center justify-between">
-                  <p className="font-semibold text-slate-900 text-sm">{t.name}</p>
+              <div key={t.id} className="panel flex flex-col gap-4 p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-[15px] font-bold text-ink">{t.name}</p>
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium ${
+                    className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${
                       t.generatedBy === "ai"
-                        ? "border-blue-200 bg-blue-50 text-blue-700"
-                        : "border-slate-200 bg-slate-50 text-slate-500"
+                        ? "bg-green-pill text-green"
+                        : "bg-page text-ink-3"
                     }`}
                   >
                     {t.generatedBy === "ai" && <SparklesIcon className="h-3 w-3" />}
                     {t.generatedBy === "ai" ? "AI generated" : t.generatedBy}
                   </span>
                 </div>
-                <div className="p-5 space-y-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600">
-                      {t.channel}
-                    </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600">
-                      {t.category}
-                    </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs text-slate-600">
-                      {t.locale}
-                    </span>
-                  </div>
-                  {t.subject ? (
-                    <p className="text-sm text-slate-700">
-                      <span className="font-medium text-slate-500">Subject:</span> {t.subject}
-                    </p>
-                  ) : null}
-                  {t.voiceScript ? (
-                    <p className="line-clamp-2 text-xs text-slate-500">
-                      <span className="font-medium">Voice:</span> {t.voiceScript}
-                    </p>
-                  ) : null}
+
+                <div className="flex flex-wrap gap-1.5">
+                  <Chip>{t.channel}</Chip>
+                  <Chip>{t.category}</Chip>
+                  <Chip>{t.locale}</Chip>
                 </div>
+
+                {t.subject ? (
+                  <p className="text-sm text-ink-2">
+                    <span className="font-semibold text-ink-3">Subject:</span> {t.subject}
+                  </p>
+                ) : null}
+                {t.voiceScript ? (
+                  <p className="line-clamp-2 text-xs text-ink-3">
+                    <span className="font-semibold">Voice:</span> {t.voiceScript}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>
         )}
       </PageBody>
-    </div>
+    </>
+  );
+}
+
+function Chip({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="inline-flex items-center rounded-full bg-page px-2.5 py-1 text-xs text-ink-2">
+      {children}
+    </span>
   );
 }

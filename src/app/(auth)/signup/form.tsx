@@ -2,9 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -12,37 +9,64 @@ export default function SignupForm() {
 
   const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    start(() => {
-      router.push("/dashboard");
-    });
+    start(() => router.push("/dashboard"));
   };
 
   return (
-    <form onSubmit={onSubmit} className="mt-8 space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="orgName">Organization name</Label>
-        <Input id="orgName" name="orgName" required defaultValue="Acme Bank Ltd" />
-      </div>
+    <form onSubmit={onSubmit} className="space-y-4">
+      <Field id="orgName" label="Organization name" defaultValue="Acme Bank Ltd" required />
       <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="name">Your name</Label>
-          <Input id="name" name="name" defaultValue="Priya Shah" />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Work email</Label>
-          <Input id="email" name="email" type="email" required defaultValue="priya@acme.demo" />
-        </div>
+        <Field id="name" label="Your name" defaultValue="Priya Shah" />
+        <Field
+          id="email"
+          label="Work email"
+          type="email"
+          defaultValue="priya@acme.demo"
+          autoComplete="email"
+          required
+        />
       </div>
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input id="password" name="password" type="password" required minLength={6} defaultValue="demo1234" />
-      </div>
-      <Button type="submit" className="w-full" size="lg" disabled={pending}>
-        {pending ? "Creating…" : "Create workspace"}
-      </Button>
-      <p className="text-xs text-muted-foreground">
-        Demo workspace pre-filled — hit create and you&apos;re in.
+      <Field
+        id="password"
+        label="Password"
+        type="password"
+        defaultValue="demo1234"
+        autoComplete="new-password"
+        required
+        minLength={6}
+      />
+
+      <button
+        type="submit"
+        disabled={pending}
+        className="pill-btn primary w-full justify-center py-3.5 text-[15px] disabled:opacity-60"
+      >
+        {pending ? "Creating workspace…" : "Create workspace"}
+      </button>
+
+      <p className="text-center text-xs text-ink-3">
+        Demo values pre-filled — hit create and you&apos;re in.
       </p>
     </form>
+  );
+}
+
+function Field({
+  id,
+  label,
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) {
+  return (
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-xs font-semibold text-ink-2">
+        {label}
+      </label>
+      <input
+        id={id}
+        name={id}
+        {...rest}
+        className="w-full rounded-[12px] border border-line bg-page px-4 py-3 text-sm text-ink outline-none transition-colors placeholder:text-ink-3 focus:border-green focus:bg-white"
+      />
+    </div>
   );
 }

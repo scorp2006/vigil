@@ -15,33 +15,33 @@ export default async function LmsPage() {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
   return (
-    <div className="bg-slate-50/50">
+    <>
       <PageHeader
         title="LMS Bridge"
         description="Feed Vigil's behavior data into the LMS your org already owns. SCORM, xAPI, and our Training Prescription API."
       />
-      <PageBody className="space-y-6">
-        <div className="grid gap-5 lg:grid-cols-2">
+      <PageBody>
+        <div className="grid gap-4 lg:grid-cols-2">
           {/* Prescription API */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-4">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-50">
-                <CodeIcon className="h-4 w-4 text-blue-600" />
+          <div className="panel flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2.5 border-b border-line px-5 py-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-green-soft">
+                <CodeIcon className="h-4 w-4 text-green" />
               </div>
-              <p className="font-semibold text-slate-900">Training Prescription API</p>
+              <p className="text-[15px] font-bold text-ink">Training Prescription API</p>
             </div>
-            <div className="p-5 space-y-4">
-              <p className="text-sm text-slate-500">
+            <div className="flex flex-col gap-4 p-5">
+              <p className="text-sm text-ink-2">
                 Read the right course for the right person at the right time. Your LMS calls one endpoint.
               </p>
-              <div className="overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-4 font-mono text-xs text-slate-700">
-                <span className="text-blue-600">GET</span> {baseUrl}/api/v1/prescription/&#123;employee_id&#125;
+              <div className="overflow-x-auto rounded-[12px] bg-page p-4 font-mono text-xs text-ink-2">
+                <span className="font-semibold text-green">GET</span> {baseUrl}/api/v1/prescription/&#123;employee_id&#125;
                 <br />
-                <span className="text-slate-400">Authorization:</span> Bearer &lt;your-api-key&gt;
+                <span className="text-ink-3">Authorization:</span> Bearer &lt;your-api-key&gt;
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-ink-3">
                 Also available:{" "}
-                <code className="rounded bg-slate-100 px-1.5 py-0.5 text-slate-600">
+                <code className="rounded bg-page px-1.5 py-0.5 text-ink-2">
                   GET /api/v1/scorm/&#123;template_id&#125;
                 </code>{" "}
                 for SCORM 2004 bundles.
@@ -51,15 +51,15 @@ export default async function LmsPage() {
           </div>
 
           {/* xAPI LRS */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-4">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-50">
-                <WebhookIcon className="h-4 w-4 text-violet-600" />
+          <div className="panel flex flex-col overflow-hidden">
+            <div className="flex items-center gap-2.5 border-b border-line px-5 py-4">
+              <div className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-amber-soft">
+                <WebhookIcon className="h-4 w-4 text-amber" />
               </div>
-              <p className="font-semibold text-slate-900">xAPI LRS webhook</p>
+              <p className="text-[15px] font-bold text-ink">xAPI LRS webhook</p>
             </div>
-            <div className="p-5 space-y-4">
-              <p className="text-sm text-slate-500">
+            <div className="flex flex-col gap-4 p-5">
+              <p className="text-sm text-ink-2">
                 We post xAPI statements (&ldquo;employee completed training&rdquo;, &ldquo;employee reported phishing&rdquo;) to your LRS
                 whenever they happen. No polling.
               </p>
@@ -68,6 +68,6 @@ export default async function LmsPage() {
           </div>
         </div>
       </PageBody>
-    </div>
+    </>
   );
 }

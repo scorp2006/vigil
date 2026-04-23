@@ -1,7 +1,9 @@
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
+import { BandPill } from "@/components/vigil-ui";
 import { ImportDialog } from "./import-dialog";
+import { UsersIcon } from "lucide-react";
 
 export default async function EmployeesPage() {
   const { org } = await requireOrg();
@@ -12,7 +14,7 @@ export default async function EmployeesPage() {
   });
 
   return (
-    <div className="bg-slate-50/50">
+    <>
       <PageHeader
         title="Employees"
         description="Everyone enrolled in your workspace. Consent is captured once per employee; records are audit-logged."
@@ -22,81 +24,80 @@ export default async function EmployeesPage() {
         {employees.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="border-b border-slate-100 bg-slate-50 text-left">
-                  <tr>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Name</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Email</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Department</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Phone</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Consent</th>
-                    <th className="px-5 py-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Risk</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {employees.map((e) => {
-                    const score = e.riskScore?.score ?? 0;
-                    const band = e.riskScore?.band ?? "low";
-                    const bandStyles: Record<string, string> = {
-                      critical: "bg-rose-50 text-rose-700 border-rose-200",
-                      high: "bg-amber-50 text-amber-700 border-amber-200",
-                      medium: "bg-yellow-50 text-yellow-700 border-yellow-200",
-                      low: "bg-emerald-50 text-emerald-700 border-emerald-200",
-                    };
-                    return (
-                      <tr key={e.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-5 py-3.5 font-medium text-slate-900">{e.name}</td>
-                        <td className="px-5 py-3.5 text-slate-500">{e.email}</td>
-                        <td className="px-5 py-3.5 text-slate-600">{e.department || "—"}</td>
-                        <td className="px-5 py-3.5 font-mono text-xs text-slate-500">{e.phone || "—"}</td>
-                        <td className="px-5 py-3.5">
-                          {e.consent ? (
-                            <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                              Given
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2.5 py-0.5 text-xs font-medium text-slate-500">
-                              Pending
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-5 py-3.5">
-                          <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium tabular-nums ${bandStyles[band] ?? bandStyles.low}`}>
-                            {Math.round(score)} · {band}
+          <div className="panel overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-line text-left">
+                  <Th>Name</Th>
+                  <Th>Email</Th>
+                  <Th>Department</Th>
+                  <Th>Phone</Th>
+                  <Th>Consent</Th>
+                  <Th>Risk</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((e) => {
+                  const score = e.riskScore?.score ?? 0;
+                  const band = e.riskScore?.band ?? "low";
+                  return (
+                    <tr key={e.id} className="border-b border-line last:border-b-0 transition-colors hover:bg-page">
+                      <Td className="font-semibold text-ink">{e.name}</Td>
+                      <Td className="text-ink-2">{e.email}</Td>
+                      <Td className="text-ink-2">{e.department || "—"}</Td>
+                      <Td className="font-mono text-xs text-ink-3">{e.phone || "—"}</Td>
+                      <Td>
+                        {e.consent ? (
+                          <span className="inline-flex items-center rounded-full bg-green-pill px-2.5 py-1 text-xs font-semibold text-green">
+                            Given
                           </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                        ) : (
+                          <span className="inline-flex items-center rounded-full bg-page px-2.5 py-1 text-xs font-semibold text-ink-3">
+                            Pending
+                          </span>
+                        )}
+                      </Td>
+                      <Td>
+                        <BandPill band={band} score={Math.round(score)} />
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </PageBody>
-    </div>
+    </>
   );
+}
+
+function Th({ children }: { children: React.ReactNode }) {
+  return (
+    <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+      {children}
+    </th>
+  );
+}
+function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <td className={`px-5 py-4 ${className}`}>{children}</td>;
 }
 
 function EmptyState() {
   return (
-    <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-14 text-center">
-      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-        <svg className="h-6 w-6 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0" />
-        </svg>
+    <div className="panel flex flex-col items-center p-14 text-center">
+      <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-green-soft">
+        <UsersIcon className="h-6 w-6 text-green" />
       </div>
-      <h3 className="text-base font-semibold text-slate-900">No employees yet</h3>
-      <p className="mt-1.5 text-sm text-slate-500">
+      <h3 className="text-base font-semibold text-ink">No employees yet</h3>
+      <p className="mt-1.5 text-sm text-ink-2">
         Paste a CSV of{" "}
-        <code className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-xs text-slate-700">
+        <code className="rounded-md bg-page px-1.5 py-0.5 font-mono text-xs text-ink-2">
           name,email,phone,department
         </code>{" "}
         to enroll your team.
       </p>
-      <div className="mt-6 flex justify-center">
+      <div className="mt-6">
         <ImportDialog />
       </div>
     </div>

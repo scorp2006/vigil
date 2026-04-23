@@ -162,33 +162,19 @@ export async function runSeed(db: PrismaClient) {
   console.log(`[seed] ${storedTemplates.length} templates`);
 
   const now = Date.now();
-  for (let c = 0; c < 6; c++) {
-    const tpl = pick(storedTemplates);
-    const launchedAt = new Date(now - (10 + rand(80)) * 86400_000);
-    const targets = employees.slice().sort(() => Math.random() - 0.5).slice(0, 20 + rand(30));
-    const campaign = await db.campaign.create({
-      data: {
-        orgId: org.id,
-        name: `${tpl.name} · wave ${c + 1}`,
-        channel: tpl.channel,
-        status: "completed",
-        templateId: tpl.id,
-        targetJson: JSON.stringify(targets.map((e) => e.id)),
-        launchedAt,
-        completedAt: launchedAt,
-      },
-    });
 
+  async function runWaveEvents(
+    campaign: { id: string },
+    tpl: { category: string },
+    targets: { id: string }[],
+    launchedAt: Date,
+  ) {
     for (const emp of targets) {
       const baseAt = new Date(launchedAt.getTime() + rand(60) * 60_000);
       await db.event.create({
         data: {
-          orgId: org.id,
-          campaignId: campaign.id,
-          employeeId: emp.id,
-          type: "sent",
-          channel: "email",
-          createdAt: baseAt,
+          orgId: org.id, campaignId: campaign.id, employeeId: emp.id,
+          type: "sent", channel: "email", createdAt: baseAt,
           meta: JSON.stringify({ category: tpl.category }),
         },
       });
@@ -196,11 +182,8 @@ export async function runSeed(db: PrismaClient) {
       if (openRoll < 0.72) {
         await db.event.create({
           data: {
-            orgId: org.id,
-            campaignId: campaign.id,
-            employeeId: emp.id,
-            type: "opened",
-            channel: "email",
+            orgId: org.id, campaignId: campaign.id, employeeId: emp.id,
+            type: "opened", channel: "email",
             createdAt: new Date(baseAt.getTime() + (1 + rand(180)) * 60_000),
             meta: JSON.stringify({ category: tpl.category }),
           },
@@ -210,23 +193,16 @@ export async function runSeed(db: PrismaClient) {
           const clickedAt = new Date(baseAt.getTime() + (3 + rand(600)) * 60_000);
           await db.event.create({
             data: {
-              orgId: org.id,
-              campaignId: campaign.id,
-              employeeId: emp.id,
-              type: "clicked",
-              channel: "email",
-              createdAt: clickedAt,
+              orgId: org.id, campaignId: campaign.id, employeeId: emp.id,
+              type: "clicked", channel: "email", createdAt: clickedAt,
               meta: JSON.stringify({ category: tpl.category }),
             },
           });
           if (Math.random() < 0.4) {
             await db.event.create({
               data: {
-                orgId: org.id,
-                campaignId: campaign.id,
-                employeeId: emp.id,
-                type: "submitted",
-                channel: "email",
+                orgId: org.id, campaignId: campaign.id, employeeId: emp.id,
+                type: "submitted", channel: "email",
                 createdAt: new Date(clickedAt.getTime() + (1 + rand(5)) * 60_000),
                 meta: JSON.stringify({ category: tpl.category }),
               },
@@ -234,11 +210,8 @@ export async function runSeed(db: PrismaClient) {
           } else if (Math.random() < 0.5) {
             await db.event.create({
               data: {
-                orgId: org.id,
-                campaignId: campaign.id,
-                employeeId: emp.id,
-                type: "training_completed",
-                channel: "training",
+                orgId: org.id, campaignId: campaign.id, employeeId: emp.id,
+                type: "training_completed", channel: "training",
                 createdAt: new Date(clickedAt.getTime() + (30 + rand(60)) * 60_000),
                 meta: JSON.stringify({ category: tpl.category, score: 2 + rand(2), total: 3 }),
               },
@@ -248,11 +221,8 @@ export async function runSeed(db: PrismaClient) {
           const delayMin = rand(12);
           await db.event.create({
             data: {
-              orgId: org.id,
-              campaignId: campaign.id,
-              employeeId: emp.id,
-              type: "reported",
-              channel: "email",
+              orgId: org.id, campaignId: campaign.id, employeeId: emp.id,
+              type: "reported", channel: "email",
               createdAt: new Date(baseAt.getTime() + (2 + delayMin) * 60_000),
               meta: JSON.stringify({ category: tpl.category, fastSeconds: delayMin * 60 }),
             },
@@ -260,6 +230,74 @@ export async function runSeed(db: PrismaClient) {
         }
       }
     }
+  }
+
+  // Past waves — 60 to 8 days ago, all completed.
+  for (let c = 0; c < 4; c++) {
+    const tpl = pick(storedTemplates);
+    const launchedAt = new Date(now - (8 + c * 14 + rand(6)) * 86400_000);
+    const targets = employees.slice().sort(() => Math.random() - 0.5).slice(0, 20 + rand(30));
+    const campaign = await db.campaign.create({
+      data: {
+        orgId: org.id, name: `${tpl.name} · wave ${c + 1}`,
+        channel: tpl.channel, status: "completed", templateId: tpl.id,
+        targetJson: JSON.stringify(targets.map((e) => e.id)),
+        launchedAt, completedAt: new Date(launchedAt.getTime() + 2 * 86400_000),
+      },
+    });
+    await runWaveEvents(campaign, tpl, targets, launchedAt);
+  }
+
+  // Running wave — launched 4 days ago so the 7-day bar chart lights up.
+  {
+    const tpl = storedTemplates[0];
+    const launchedAt = new Date(now - 4 * 86400_000);
+    const targets = employees.slice().sort(() => Math.random() - 0.5).slice(0, 45);
+    const running = await db.campaign.create({
+      data: {
+        orgId: org.id, name: `${tpl.name} · wave 5`,
+        channel: tpl.channel, status: "running", templateId: tpl.id,
+        targetJson: JSON.stringify(targets.map((e) => e.id)),
+        launchedAt,
+      },
+    });
+    await runWaveEvents(running, tpl, targets, launchedAt);
+  }
+
+  // Scheduled wave — tomorrow, no events yet. Populates dashboard Upcoming card.
+  {
+    const tpl = storedTemplates[1];
+    const scheduledAt = new Date(now + 1 * 86400_000);
+    scheduledAt.setHours(10, 0, 0, 0);
+    const targets = employees.slice().sort(() => Math.random() - 0.5).slice(0, 120 > employees.length ? employees.length : 120);
+    await db.campaign.create({
+      data: {
+        orgId: org.id, name: "Q3 Vendor invoice lure",
+        channel: tpl.channel, status: "scheduled", templateId: tpl.id,
+        targetJson: JSON.stringify(targets.map((e) => e.id)),
+        scheduledAt,
+      },
+    });
+  }
+
+  // Sprinkle a handful of "report" events across today + the last few days so
+  // Reports Today is non-zero and recent activity feels alive. These are
+  // late-reports on older campaigns (common in real life).
+  const startOfToday = new Date();
+  startOfToday.setHours(0, 0, 0, 0);
+  const allCampaigns = await db.campaign.findMany({ where: { orgId: org.id }, select: { id: true, templateId: true } });
+  for (let i = 0; i < 12; i++) {
+    const emp = pick(employees);
+    const camp = pick(allCampaigns);
+    const daysBack = rand(6);
+    const createdAt = new Date(startOfToday.getTime() - daysBack * 86400_000 + rand(20) * 3600_000);
+    await db.event.create({
+      data: {
+        orgId: org.id, campaignId: camp.id, employeeId: emp.id,
+        type: "reported", channel: "email", createdAt,
+        meta: JSON.stringify({ fastSeconds: 60 + rand(600), lateReport: true }),
+      },
+    });
   }
 
   const { recomputeEmployeeRisk } = await import("../src/lib/risk");

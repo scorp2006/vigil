@@ -6,11 +6,15 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function resolveDatabaseUrl() {
-  const raw = process.env.DATABASE_URL || "file:./prisma/dev.db";
+  const raw = process.env.DATABASE_URL || "file:./dev.db";
   if (!raw.startsWith("file:")) return raw;
   const p = raw.slice("file:".length);
   if (path.isAbsolute(p) || /^[A-Za-z]:[/\\]/.test(p)) return raw;
-  const abs = path.resolve(process.cwd(), p);
+  // Match Prisma CLI: SQLite relative paths are resolved from the schema's
+  // directory (prisma/), not the process cwd. Without this alignment, `prisma
+  // db push` writes to prisma/dev.db while the runtime client reads/writes
+  // dev.db at the project root.
+  const abs = path.resolve(process.cwd(), "prisma", p);
   return `file:${abs.replace(/\\/g, "/")}`;
 }
 

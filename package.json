@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "prisma generate && node scripts/strip-ts-nocheck.mjs && prisma db push --accept-data-loss --skip-generate && next build",
+    "dev": "node scripts/sync-prisma-provider.mjs && next dev",
+    "build": "node scripts/sync-prisma-provider.mjs && prisma generate && node scripts/strip-ts-nocheck.mjs && prisma db push --accept-data-loss --skip-generate && next build",
     "start": "next start",
     "lint": "eslint",
     "seed": "tsx prisma/seed.ts",
     "db:reset": "prisma migrate reset --force --skip-seed",
-    "postinstall": "prisma generate && node scripts/strip-ts-nocheck.mjs"
+    "db:push": "node scripts/sync-prisma-provider.mjs && prisma db push --accept-data-loss",
+    "postinstall": "node scripts/sync-prisma-provider.mjs && prisma generate && node scripts/strip-ts-nocheck.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
