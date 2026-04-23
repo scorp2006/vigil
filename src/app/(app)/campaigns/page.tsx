@@ -38,12 +38,10 @@ export default async function CampaignsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-line text-left">
-                  <Th>Name</Th>
-                  <Th>Channel</Th>
-                  <Th>Category</Th>
+                  <Th>Campaign</Th>
                   <Th>Status</Th>
-                  <Th>Events</Th>
-                  <Th>Created</Th>
+                  <Th className="text-right">Events</Th>
+                  <Th className="text-right">Created</Th>
                 </tr>
               </thead>
               <tbody>
@@ -56,11 +54,10 @@ export default async function CampaignsPage() {
                       >
                         {c.name}
                       </Link>
+                      <div className="mt-0.5 text-xs text-ink-3">
+                        {c.template?.category?.replaceAll("_", " ") || "—"} · {c.channel}
+                      </div>
                     </Td>
-                    <Td>
-                      <Chip>{c.channel}</Chip>
-                    </Td>
-                    <Td className="text-ink-2">{c.template?.category || "—"}</Td>
                     <Td>
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${
@@ -70,8 +67,8 @@ export default async function CampaignsPage() {
                         {c.status}
                       </span>
                     </Td>
-                    <Td className="font-mono tabular-nums text-ink-2">{c._count.events}</Td>
-                    <Td className="text-xs text-ink-3">{c.createdAt.toISOString().slice(0, 10)}</Td>
+                    <Td className="text-right font-mono tabular-nums text-ink-2">{c._count.events}</Td>
+                    <Td className="text-right text-xs text-ink-3">{c.createdAt.toISOString().slice(0, 10)}</Td>
                   </tr>
                 ))}
               </tbody>
@@ -83,22 +80,15 @@ export default async function CampaignsPage() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+    <th className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3 ${className}`}>
       {children}
     </th>
   );
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-5 py-4 ${className}`}>{children}</td>;
-}
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-page px-2.5 py-1 text-xs text-ink-2">
-      {children}
-    </span>
-  );
 }
 
 function EmptyState() {

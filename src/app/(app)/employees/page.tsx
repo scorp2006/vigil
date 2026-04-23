@@ -1,8 +1,8 @@
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
-import { BandPill } from "@/components/vigil-ui";
 import { ImportDialog } from "./import-dialog";
+import { EmployeesTable, type EmployeeRow } from "./employees-table";
 import { UsersIcon } from "lucide-react";
 
 export default async function EmployeesPage() {
@@ -13,6 +13,16 @@ export default async function EmployeesPage() {
     include: { riskScore: true },
   });
 
+  const rows: EmployeeRow[] = employees.map((e) => ({
+    id: e.id,
+    name: e.name,
+    email: e.email,
+    department: e.department,
+    consent: e.consent,
+    score: e.riskScore?.score ?? 0,
+    band: e.riskScore?.band ?? "low",
+  }));
+
   return (
     <>
       <PageHeader
@@ -21,72 +31,13 @@ export default async function EmployeesPage() {
         actions={<ImportDialog />}
       />
       <PageBody>
-        {employees.length === 0 ? (
+        {rows.length === 0 ? (
           <EmptyState />
         ) : (
-          <div className="panel overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line text-left">
-                  <Th>Name</Th>
-                  <Th>Department</Th>
-                  <Th>Risk</Th>
-                  <Th className="text-right">Consent</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((e) => {
-                  const score = e.riskScore?.score ?? 0;
-                  const band = e.riskScore?.band ?? "low";
-                  return (
-                    <tr key={e.id} className="border-b border-line last:border-b-0 transition-colors hover:bg-page">
-                      <Td>
-                        <div className="font-semibold text-ink">{e.name}</div>
-                        <div className="text-xs text-ink-3">{e.email}</div>
-                      </Td>
-                      <Td className="text-ink-2">{e.department || "—"}</Td>
-                      <Td>
-                        <BandPill band={band} score={Math.round(score)} />
-                      </Td>
-                      <Td className="text-right">
-                        <ConsentDot given={e.consent} />
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <EmployeesTable employees={rows} />
         )}
       </PageBody>
     </>
-  );
-}
-
-function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return (
-    <th className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3 ${className}`}>
-      {children}
-    </th>
-  );
-}
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-5 py-4 ${className}`}>{children}</td>;
-}
-
-function ConsentDot({ given }: { given: boolean }) {
-  return (
-    <span
-      className="inline-flex items-center gap-1.5 text-xs text-ink-3"
-      title={given ? "Consent given" : "Consent pending"}
-    >
-      <span
-        className="inline-block h-2 w-2 rounded-full"
-        style={{ background: given ? "var(--green)" : "var(--line-2)" }}
-        aria-hidden="true"
-      />
-      {given ? "Given" : "Pending"}
-    </span>
   );
 }
 

@@ -3,9 +3,7 @@ import { notFound } from "next/navigation";
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
-import { ArrowLeftIcon } from "lucide-react";
-
-const EVENT_TYPES = ["sent", "opened", "clicked", "submitted", "reported", "training_completed"];
+import { ArrowLeftIcon, FlagIcon, GraduationCapIcon } from "lucide-react";
 
 const EVENT_TONE: Record<string, string> = {
   sent: "bg-page text-ink-2",
@@ -36,11 +34,21 @@ export default async function CampaignDetail({ params }: { params: Promise<{ id:
     return acc;
   }, {});
 
+  const sent = counts.sent ?? 0;
+  const opened = counts.opened ?? 0;
+  const clicked = counts.clicked ?? 0;
+  const submitted = counts.submitted ?? 0;
+  const reported = counts.reported ?? 0;
+  const trained = counts.training_completed ?? 0;
+  const openedPct = sent > 0 ? Math.round((opened / sent) * 100) : 0;
+  const clickedPct = sent > 0 ? Math.round((clicked / sent) * 100) : 0;
+  const submittedPct = sent > 0 ? Math.round((submitted / sent) * 100) : 0;
+
   return (
     <>
       <PageHeader
         title={campaign.name}
-        description={`${campaign.channel} · ${campaign.template?.category ?? "—"}`}
+        description={`${campaign.channel} · ${campaign.template?.category?.replaceAll("_", " ") ?? "—"}`}
         actions={
           <Link href="/campaigns" className="pill-btn">
             <ArrowLeftIcon className="h-3.5 w-3.5" /> Back to campaigns
@@ -48,16 +56,40 @@ export default async function CampaignDetail({ params }: { params: Promise<{ id:
         }
       />
       <PageBody>
-        {/* Counter row */}
-        <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
-          {EVENT_TYPES.map((t) => (
-            <div key={t} className="panel p-4 text-center">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-ink-3">
-                {t.replaceAll("_", " ")}
-              </p>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-ink">{counts[t] ?? 0}</p>
+        {/* Funnel + Outcomes */}
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
+          {/* Funnel — horizontal bars, each % of sent */}
+          <div className="panel p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-[15px] font-bold text-ink">Delivery funnel</h3>
+              <span className="text-xs text-ink-3">% of {sent} sent</span>
             </div>
-          ))}
+            <div className="space-y-4">
+              <FunnelBar label="Sent" count={sent} pct={sent > 0 ? 100 : 0} tone="ink" />
+              <FunnelBar label="Opened" count={opened} pct={openedPct} tone="amber" />
+              <FunnelBar label="Clicked" count={clicked} pct={clickedPct} tone="rose" />
+              <FunnelBar label="Submitted" count={submitted} pct={submittedPct} tone="rose" />
+            </div>
+          </div>
+
+          {/* Outcomes — the positive half: reports + training */}
+          <div className="panel p-6">
+            <h3 className="mb-4 text-[15px] font-bold text-ink">Outcomes</h3>
+            <div className="flex flex-col gap-3">
+              <OutcomeCell
+                icon={FlagIcon}
+                label="Reported"
+                count={reported}
+                sub={sent > 0 ? `${Math.round((reported / sent) * 100)}% report rate` : "—"}
+              />
+              <OutcomeCell
+                icon={GraduationCapIcon}
+                label="Training completed"
+                count={trained}
+                sub={clicked > 0 ? `${Math.round((trained / clicked) * 100)}% of clickers` : "—"}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Timeline */}
@@ -126,4 +158,67 @@ function Th({ children }: { children: React.ReactNode }) {
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-5 py-4 ${className}`}>{children}</td>;
+}
+
+function FunnelBar({
+  label,
+  count,
+  pct,
+  tone,
+}: {
+  label: string;
+  count: number;
+  pct: number;
+  tone: "ink" | "amber" | "rose" | "green";
+}) {
+  const fillColor =
+    tone === "amber"
+      ? "var(--amber)"
+      : tone === "rose"
+        ? "var(--rose)"
+        : tone === "green"
+          ? "var(--green-active)"
+          : "var(--ink)";
+  return (
+    <div>
+      <div className="mb-1 flex items-baseline justify-between gap-3">
+        <div className="flex items-baseline gap-2">
+          <span className="text-sm font-semibold text-ink">{label}</span>
+          <span className="text-xs text-ink-3">{pct}%</span>
+        </div>
+        <span className="font-mono text-sm tabular-nums text-ink-2">{count}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-page">
+        <div
+          className="h-full rounded-full transition-all"
+          style={{ width: `${pct}%`, background: fillColor }}
+        />
+      </div>
+    </div>
+  );
+}
+
+function OutcomeCell({
+  icon: Icon,
+  label,
+  count,
+  sub,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  count: number;
+  sub: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 rounded-[14px] bg-green-soft/40 p-4">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-pill text-green">
+        <Icon className="h-5 w-5" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-xs font-semibold uppercase tracking-wide text-ink-3">{label}</div>
+        <div className="mt-0.5 text-2xl font-bold tabular-nums text-ink">{count}</div>
+      </div>
+      <div className="text-right text-xs text-ink-3">{sub}</div>
+    </div>
+  );
 }
