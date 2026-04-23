@@ -14,8 +14,8 @@ export type SessionData = {
 const DEMO_SESSION: SessionData = {
   userId: "demo-user",
   orgId: "demo-org",
-  email: "admin@acme.demo",
-  name: "Demo Admin",
+  email: "admin@nile.demo",
+  name: "Youssef El-Sayed",
 };
 
 // Kept for any stale imports; no-ops.

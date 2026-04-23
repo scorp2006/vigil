@@ -14,14 +14,14 @@ export default function SignupForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <Field id="orgName" label="Organization name" defaultValue="Acme Bank Ltd" required />
+      <Field id="orgName" label="Organization name" defaultValue="Nile Commercial Bank" required />
       <div className="grid grid-cols-2 gap-3">
-        <Field id="name" label="Your name" defaultValue="Priya Shah" />
+        <Field id="name" label="Your name" defaultValue="Youssef El-Sayed" />
         <Field
           id="email"
           label="Work email"
           type="email"
-          defaultValue="priya@acme.demo"
+          defaultValue="youssef@nile.demo"
           autoComplete="email"
           required
         />

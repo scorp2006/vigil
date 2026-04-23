@@ -39,7 +39,7 @@ export default function LoginForm() {
           id="email"
           label="Work email"
           type="email"
-          defaultValue="admin@acme.demo"
+          defaultValue="admin@nile.demo"
           autoComplete="email"
           required
         />

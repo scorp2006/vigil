@@ -2,15 +2,19 @@ import bcrypt from "bcryptjs";
 import type { PrismaClient } from "../src/generated/prisma/client";
 
 const FIRST_NAMES = [
-  "Priya", "Rohan", "Ananya", "Arjun", "Sneha", "Rahul", "Kavya", "Vikram",
-  "Neha", "Aditya", "Meera", "Siddharth", "Riya", "Karan", "Diya", "Aarav",
-  "Ishita", "Dhruv", "Tanvi", "Aryan", "Sanya", "Vihaan", "Pooja", "Kunal",
-  "Shruti", "Manav", "Aisha", "Rohit", "Kiara", "Nikhil", "Zara", "Yash",
+  // male
+  "Ahmed", "Mohamed", "Mahmoud", "Omar", "Youssef", "Hassan", "Ali", "Mostafa",
+  "Ibrahim", "Karim", "Tarek", "Khaled", "Amr", "Sherif", "Hisham", "Tamer",
+  "Adel", "Waleed", "Amir", "Ziad",
+  // female
+  "Fatma", "Nour", "Yasmin", "Mariam", "Salma", "Mona", "Dina", "Heba",
+  "Reem", "Rana", "Aya", "Sara", "Dalia", "Hana", "Laila", "Aisha",
+  "Noha", "Rania", "Farida", "Habiba",
 ];
 const LAST_NAMES = [
-  "Shah", "Mehta", "Rao", "Iyer", "Patel", "Kapoor", "Singh", "Kumar",
-  "Nair", "Joshi", "Reddy", "Bose", "Das", "Menon", "Pillai", "Gupta",
-  "Khan", "Sharma", "Verma", "Agarwal",
+  "El-Sayed", "Abdel Aziz", "Hassan", "Mahmoud", "Ali", "Ibrahim", "Mostafa",
+  "Kamal", "Farouk", "Gaber", "Hamdy", "Saad", "Fouad", "Shaaban", "Soliman",
+  "Samir", "Radwan", "Naguib", "Zaki", "Helmy", "El-Masry", "Abdel Rahman",
 ];
 const DEPARTMENTS = ["Finance", "Engineering", "HR", "Sales", "Marketing", "Operations", "IT", "Legal"];
 
@@ -20,8 +24,15 @@ function pick<T>(arr: T[]): T {
 function rand(n: number) {
   return Math.floor(Math.random() * n);
 }
-function phoneIN() {
-  return "+91 9" + String(rand(900000000) + 100000000).padStart(9, "0");
+function phoneEG() {
+  // Egyptian mobile numbers: +20 1X XXXX XXXX (where X starts with 0/1/2/5)
+  const prefix = pick(["10", "11", "12", "15"]);
+  return "+20 " + prefix + " " + String(rand(100000000)).padStart(8, "0");
+}
+
+// Slugify email-safe: strip diacritics/spaces/hyphens.
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z]/g, "");
 }
 
 function buildTraining(category: string, _name: string) {
@@ -50,13 +61,13 @@ export async function runSeed(db: PrismaClient) {
   const passwordHash = await bcrypt.hash("demo1234", 10);
   const org = await db.org.create({
     data: {
-      name: "Acme Bank Ltd",
-      slug: "acme-bank-demo",
-      region: "IN",
+      name: "Nile Commercial Bank",
+      slug: "acme-bank-demo", // internal slug kept stable for session lookups
+      region: "EG",
       users: {
         create: {
-          email: "admin@acme.demo",
-          name: "Priya Shah",
+          email: "admin@nile.demo",
+          name: "Youssef El-Sayed",
           password: passwordHash,
           role: "admin",
         },
@@ -77,18 +88,18 @@ export async function runSeed(db: PrismaClient) {
     const first = pick(FIRST_NAMES);
     const last = pick(LAST_NAMES);
     const dept = pick(DEPARTMENTS);
-    const email = `${first.toLowerCase()}.${last.toLowerCase()}${i}@acme.demo`;
+    const email = `${slugify(first)}.${slugify(last)}${i}@nile.demo`;
     const e = await db.employee.create({
       data: {
         orgId: org.id,
         email,
         name: `${first} ${last}`,
-        phone: phoneIN(),
+        phone: phoneEG(),
         department: dept,
         groupId: groupByName.get(dept)!,
         consent: true,
         consentAt: new Date(Date.now() - rand(80) * 86400_000),
-        locale: Math.random() < 0.8 ? "en" : "hi",
+        locale: Math.random() < 0.75 ? "en" : "ar",
       },
     });
     employees.push({ id: e.id });
@@ -103,10 +114,10 @@ export async function runSeed(db: PrismaClient) {
       subject: "URGENT: Invoice #KY-2026-0918 past due",
       fromName: "Kyocera Accounts",
       fromEmail: "accounts@kyocera-payments.co",
-      bodyHtml: `<p>Dear Finance,</p><p>Invoice <strong>#KY-2026-0918</strong> is 7 days overdue. Bank details changed — see <a href="{{TRACK_URL}}">updated portal</a>.</p><p>Regards,<br/>Priya Nair</p>`,
+      bodyHtml: `<p>Dear Finance,</p><p>Invoice <strong>#KY-2026-0918</strong> is 7 days overdue. Bank details changed — see <a href="{{TRACK_URL}}">updated portal</a>.</p><p>Regards,<br/>Dina Fouad</p>`,
       landing: { headline: "Kyocera Vendor Portal", subhead: "Sign in to view updated bank details.", ctaLabel: "Sign in" },
       voiceScript:
-        "Hello, this is Priya from Kyocera Accounts. Invoice KY-2026-0918 is seven days overdue. We updated our bank account last quarter. Please press 1 to confirm your vendor code.",
+        "Hello, this is Dina from Kyocera Accounts. Invoice KY-2026-0918 is seven days overdue. We updated our bank account last quarter. Please press 1 to confirm your vendor code.",
       voicePersona: "Accounts Receivable executive",
     },
     {
@@ -119,7 +130,7 @@ export async function runSeed(db: PrismaClient) {
       bodyHtml: `<p>Hi team,</p><p>New MFA policy rolls out Monday. <a href="{{TRACK_URL}}">Re-enroll now</a> to avoid lockout.</p><p>— IT</p>`,
       landing: { headline: "MFA Re-enrollment", subhead: "Sign in with your corporate credentials.", ctaLabel: "Sign in" },
       voiceScript:
-        "Hi, this is Arjun from IT Helpdesk. Your MFA token needs rotation to avoid Monday lockout. I'll walk you through re-enrollment. Press 1 when you're ready.",
+        "Hi, this is Omar from IT Helpdesk. Your MFA token needs rotation to avoid Monday lockout. I'll walk you through re-enrollment. Press 1 when you're ready.",
       voicePersona: "IT helpdesk agent",
     },
     {
@@ -304,5 +315,5 @@ export async function runSeed(db: PrismaClient) {
   for (const e of employees) {
     await recomputeEmployeeRisk(e.id);
   }
-  console.log("[seed] ✓ complete. Login: admin@acme.demo / demo1234");
+  console.log("[seed] ✓ complete. Login: admin@nile.demo / demo1234");
 }

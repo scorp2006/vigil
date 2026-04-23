@@ -3,7 +3,7 @@ import { CheckIcon } from "lucide-react";
 
 const TRUST = [
   "Ethical guardrails enforced at the platform level",
-  "Regional data residency — IN / EU / US",
+  "Regional data residency — EG / EU / MENA",
   "No fake layoffs, no shame leaderboards, ever",
 ];
 

@@ -438,7 +438,7 @@ function parseTargets(json: string) {
 }
 
 function formatDateLong(d: Date) {
-  return new Intl.DateTimeFormat("en-IN", {
+  return new Intl.DateTimeFormat("en-GB", {
     weekday: "short",
     day: "2-digit",
     month: "short",

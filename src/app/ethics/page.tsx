@@ -25,7 +25,7 @@ const PRINCIPLES = [
   },
   {
     title: "Regional data residency",
-    body: "Indian organizations: AWS Mumbai. EU: Frankfurt. US: Virginia. We never export personally identifiable data across the boundary you care about.",
+    body: "Egyptian organizations: AWS Bahrain (Middle East). EU customers: Frankfurt. We never export personally identifiable data across the boundary you care about.",
     tag: "Data & privacy",
   },
   {
