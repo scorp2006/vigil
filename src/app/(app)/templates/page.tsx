@@ -42,18 +42,14 @@ export default async function TemplatesPage() {
                 <div className="flex flex-wrap gap-1.5">
                   <Chip>{t.channel}</Chip>
                   <Chip>{t.category}</Chip>
-                  <Chip>{t.locale}</Chip>
+                  {t.locale !== "en" ? <Chip>{t.locale}</Chip> : null}
                 </div>
 
                 {t.subject ? (
-                  <p className="text-sm text-ink-2">
-                    <span className="font-semibold text-ink-3">Subject:</span> {t.subject}
-                  </p>
+                  <p className="line-clamp-2 text-sm text-ink-2">{t.subject}</p>
                 ) : null}
-                {t.voiceScript ? (
-                  <p className="line-clamp-2 text-xs text-ink-3">
-                    <span className="font-semibold">Voice:</span> {t.voiceScript}
-                  </p>
+                {t.voiceScript && (t.channel === "voice" || t.channel === "multi") ? (
+                  <p className="line-clamp-2 text-xs text-ink-3">{t.voiceScript}</p>
                 ) : null}
               </div>
             ))}

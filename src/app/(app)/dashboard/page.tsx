@@ -2,38 +2,41 @@ import Link from "next/link";
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
-import { BandPill, TrackerCard } from "@/components/vigil-ui";
+import { BandPill } from "@/components/vigil-ui";
 import {
   ArrowUpRightIcon,
   PlayIcon,
   PlusIcon,
   CalendarIcon,
-  MailIcon,
-  PhoneIcon,
-  StarIcon,
-  PackageIcon,
+  MailOpenIcon,
+  MousePointerClickIcon,
+  FlagIcon,
+  GraduationCapIcon,
+  PhoneCallIcon,
+  ShieldCheckIcon,
+  TrendingUpIcon,
+  TrendingDownIcon,
 } from "lucide-react";
 
 export default async function DashboardPage() {
   const { org } = await requireOrg();
 
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600_000);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600_000);
+  const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 3600_000);
 
   const [
     employeeCount,
-    activeCampaigns,
     nextCampaign,
     events7,
-    reportsToday,
+    events30,
+    eventsPrev30,
+    recentActivity,
     risks,
     riskBands,
-    topTemplates,
   ] = await Promise.all([
     db.employee.count({ where: { orgId: org.id } }),
-    db.campaign.count({ where: { orgId: org.id, status: { in: ["running", "scheduled"] } } }),
     db.campaign.findFirst({
       where: { orgId: org.id, status: "scheduled", scheduledAt: { gte: now } },
       orderBy: { scheduledAt: "asc" },
@@ -43,33 +46,51 @@ export default async function DashboardPage() {
       where: { orgId: org.id, createdAt: { gte: sevenDaysAgo } },
       select: { type: true, createdAt: true },
     }),
-    db.event.count({
-      where: { orgId: org.id, type: "reported", createdAt: { gte: startOfToday } },
+    db.event.findMany({
+      where: { orgId: org.id, createdAt: { gte: thirtyDaysAgo } },
+      select: { type: true },
+    }),
+    db.event.findMany({
+      where: {
+        orgId: org.id,
+        createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo },
+      },
+      select: { type: true },
+    }),
+    db.event.findMany({
+      where: { orgId: org.id },
+      orderBy: { createdAt: "desc" },
+      take: 7,
+      include: { employee: { select: { name: true } } },
     }),
     db.riskScore.findMany({
       where: { employee: { orgId: org.id } },
       include: { employee: { select: { name: true, department: true } } },
       orderBy: { score: "desc" },
-      take: 4,
+      take: 5,
     }),
     db.riskScore.findMany({
       where: { employee: { orgId: org.id } },
       select: { band: true },
     }),
-    db.template.findMany({
-      where: { orgId: org.id },
-      orderBy: { createdAt: "desc" },
-      take: 4,
-      include: { _count: { select: { campaigns: true } } },
-    }),
   ]);
 
-  // Stat: high-risk count
+  // 30-day report rate (feature KPI)
+  const sent30 = events30.filter((e) => e.type === "sent").length;
+  const reported30 = events30.filter((e) => e.type === "reported").length;
+  const reportRate = sent30 > 0 ? Math.round((reported30 / sent30) * 100) : 0;
+
+  const sentPrev = eventsPrev30.filter((e) => e.type === "sent").length;
+  const reportedPrev = eventsPrev30.filter((e) => e.type === "reported").length;
+  const reportRatePrev = sentPrev > 0 ? Math.round((reportedPrev / sentPrev) * 100) : 0;
+  const reportRateDelta = reportRate - reportRatePrev;
+
+  // High-risk
   const highRiskCount = riskBands.filter((r) => r.band === "critical" || r.band === "high").length;
   const totalRanked = riskBands.length || 1;
   const highRiskPct = ((highRiskCount / totalRanked) * 100).toFixed(1);
 
-  // Bar chart: event volume per weekday for the last 7 days
+  // 7-day activity chart
   const weekday = ["S", "M", "T", "W", "T", "F", "S"];
   const buckets = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(now);
@@ -87,65 +108,45 @@ export default async function DashboardPage() {
     ...b,
     height: Math.max(8, Math.round((b.count / max) * 100)),
     variant: i === peakIdx ? "peak" : b.count >= max * 0.55 ? "solid" : b.count >= max * 0.35 ? "mid" : "hatch",
-    pct: Math.round((b.count / Math.max(1, max)) * 100),
   }));
-
-  // Risk distribution gauge — proportions
-  const lowCount = riskBands.filter((r) => r.band === "low").length;
-  const medCount = riskBands.filter((r) => r.band === "medium").length;
-  const safePct = totalRanked ? Math.round(((lowCount + medCount) / totalRanked) * 100) : 0;
 
   return (
     <>
       <PageHeader
         title="Dashboard"
-        description="Monitor workforce risk, run simulations, and train employees with ease."
+        description="How your program is doing, at a glance."
         actions={
-          <>
-            <Link href="/campaigns/new" className="pill-btn primary">
-              <PlusIcon className="h-3.5 w-3.5" strokeWidth={2.5} /> New Campaign
-            </Link>
-            <Link href="/employees" className="pill-btn">Import CSV</Link>
-          </>
+          <Link href="/campaigns/new" className="pill-btn primary">
+            <PlusIcon className="h-3.5 w-3.5" strokeWidth={2.5} /> New Campaign
+          </Link>
         }
       />
 
       <PageBody>
-        {/* STAT ROW */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {/* ── ROW 1: Program health stats (3 cards, feature = report rate) ── */}
+        <div className="grid gap-4 sm:grid-cols-3">
+          <Stat label="Employees" value={employeeCount} sub={`${totalRanked} ranked`} />
           <FeatureStat
-            label="Total Employees"
-            value={employeeCount}
-            tag={`▲ ${Math.min(12, employeeCount)}`}
-            note="Onboarded this month"
+            label="30-day report rate"
+            value={`${reportRate}%`}
+            delta={reportRateDelta}
+            sub={reportRateDelta === 0 ? "Unchanged vs prior 30 days" : `${reportRateDelta > 0 ? "+" : ""}${reportRateDelta}pp vs prior 30 days`}
           />
           <Stat
-            label="Active Campaigns"
-            value={activeCampaigns}
-            tag={nextCampaign?.scheduledAt ? "+1" : "—"}
-            note={nextCampaign?.scheduledAt
-              ? `Scheduled for ${formatDate(nextCampaign.scheduledAt)}`
-              : "Nothing on the calendar"}
-          />
-          <Stat
-            label="High-risk Employees"
+            label="High-risk"
             value={highRiskCount}
-            tag={highRiskCount > 0 ? `▲ ${highRiskCount}` : "0"}
-            tagTone="rose"
-            note={`${highRiskPct}% of workforce`}
-          />
-          <Stat
-            label="Reports Today"
-            value={reportsToday}
-            tag={reportsToday > 0 ? `▲ ${reportsToday}` : "—"}
-            note={reportsToday > 0 ? "vs yesterday" : "No reports yet today"}
+            tone={highRiskCount > 0 ? "rose" : "green"}
+            sub={`${highRiskPct}% of ranked workforce`}
           />
         </div>
 
-        {/* MID ROW: chart + upcoming + templates */}
-        <div className="grid gap-4 lg:grid-cols-[2fr_1.2fr_1.4fr]">
+        {/* ── ROW 2: What's happening + what's next ── */}
+        <div className="grid gap-4 lg:grid-cols-[2fr_1fr]">
           <Card>
-            <CardHead title="Event Analytics" trailing={<MoreButton>This week ▾</MoreButton>} />
+            <CardHead
+              title="Last 7 days"
+              trailing={<span className="text-xs text-ink-3">Events per day</span>}
+            />
             <div className="flex h-[180px] items-end gap-3.5 py-2">
               {bars.map((b, i) => (
                 <div key={i} className="flex flex-1 flex-col items-center gap-2">
@@ -184,51 +185,45 @@ export default async function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHead title="Upcoming" />
-            <div className="text-xl font-semibold text-ink">
-              {nextCampaign?.name ?? "Nothing scheduled"}
-            </div>
-            <div className="mt-1 mb-5 flex items-center gap-1.5 text-[13px] text-ink-3">
-              <CalendarIcon className="h-3.5 w-3.5" />
-              {nextCampaign?.scheduledAt
-                ? `${formatDateLong(nextCampaign.scheduledAt)} · ${parseTargets(nextCampaign.targetJson)} targets`
-                : "Schedule a campaign to see it here"}
-            </div>
-            <Link
-              href={nextCampaign ? `/campaigns/${nextCampaign.id}` : "/campaigns/new"}
-              className="pill-btn primary justify-center !px-3 !py-3.5"
-              style={{ width: "100%" }}
-            >
-              <PlayIcon className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
-              {nextCampaign ? "Launch now" : "Plan one"}
-            </Link>
-          </Card>
-
-          <Card>
-            <CardHead title="Templates" trailing={<Link href="/templates" className="more-btn">+ New</Link>} />
-            <div className="flex flex-col gap-4">
-              {topTemplates.length === 0 ? (
-                <EmptyHint text="No templates yet. Generate one." />
-              ) : (
-                topTemplates.map((t) => (
-                  <div key={t.id} className="flex items-center gap-3">
-                    <TemplateDot channel={t.channel} category={t.category} />
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-semibold text-ink">{t.name}</div>
-                      <div className="text-xs text-ink-3">
-                        {t._count.campaigns} campaign{t._count.campaigns === 1 ? "" : "s"} · {t.generatedBy} ·{" "}
-                        {formatShort(t.createdAt)}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+            <CardHead title="Next up" />
+            {nextCampaign ? (
+              <>
+                <div className="text-xl font-semibold text-ink">{nextCampaign.name}</div>
+                <div className="mt-1 mb-5 flex items-center gap-1.5 text-[13px] text-ink-3">
+                  <CalendarIcon className="h-3.5 w-3.5" />
+                  {nextCampaign.scheduledAt
+                    ? `${formatDateLong(nextCampaign.scheduledAt)} · ${parseTargets(nextCampaign.targetJson)} targets`
+                    : "—"}
+                </div>
+                <Link
+                  href={`/campaigns/${nextCampaign.id}`}
+                  className="pill-btn primary justify-center !px-3 !py-3.5"
+                  style={{ width: "100%" }}
+                >
+                  <PlayIcon className="h-3.5 w-3.5 fill-current" strokeWidth={0} />
+                  Launch now
+                </Link>
+              </>
+            ) : (
+              <>
+                <div className="text-xl font-semibold text-ink">Nothing scheduled</div>
+                <div className="mt-1 mb-5 text-[13px] text-ink-3">
+                  Plan a campaign to keep the muscle warm.
+                </div>
+                <Link
+                  href="/campaigns/new"
+                  className="pill-btn primary justify-center !px-3 !py-3.5"
+                  style={{ width: "100%" }}
+                >
+                  <PlusIcon className="h-3.5 w-3.5" strokeWidth={2.5} /> Plan one
+                </Link>
+              </>
+            )}
           </Card>
         </div>
 
-        {/* BOT ROW: high-risk + gauge + integration */}
-        <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr_1fr]">
+        {/* ── ROW 3: Who needs attention + what just happened ── */}
+        <div className="grid gap-4 lg:grid-cols-2">
           <Card>
             <CardHead
               title="High-risk employees"
@@ -246,9 +241,7 @@ export default async function DashboardPage() {
                     <Avatar name={r.employee.name} band={r.band} />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-sm font-semibold text-ink">{r.employee.name}</div>
-                      <div className="text-xs text-ink-3">
-                        {r.employee.department || "—"} · score {Math.round(r.score)}
-                      </div>
+                      <div className="text-xs text-ink-3">{r.employee.department || "—"}</div>
                     </div>
                     <BandPill band={r.band} score={Math.round(r.score)} />
                   </div>
@@ -258,66 +251,34 @@ export default async function DashboardPage() {
           </Card>
 
           <Card>
-            <CardHead title="Risk distribution" />
-            <div className="flex flex-col items-center pt-2">
-              <div className="relative h-[130px] w-[220px]">
-                <svg viewBox="0 0 220 130" width="220" height="130">
-                  <path d="M 20 120 A 90 90 0 0 1 200 120" fill="none" stroke="var(--line)" strokeWidth="22" strokeLinecap="round" />
-                  {totalRanked > 0 ? (
-                    <>
-                      <path
-                        d={arcPath(0, lowCount / totalRanked)}
-                        fill="none"
-                        stroke="var(--green-active)"
-                        strokeWidth="22"
-                        strokeLinecap="round"
-                      />
-                      <path
-                        d={arcPath(lowCount / totalRanked, (lowCount + medCount) / totalRanked)}
-                        fill="none"
-                        stroke="#4ca371"
-                        strokeWidth="22"
-                        strokeLinecap="round"
-                      />
-                    </>
-                  ) : null}
-                </svg>
-                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-center">
-                  <div className="text-3xl font-bold tracking-tight text-ink">{safePct}%</div>
-                  <div className="mt-0.5 text-[11px] font-medium tracking-wide text-ink-3">LOW/MEDIUM</div>
-                </div>
-              </div>
-              <div className="mt-4 flex gap-4 text-xs text-ink-2">
-                <LegendKey color="var(--green-active)" label="Low" />
-                <LegendKey color="#4ca371" label="Medium" />
-                <LegendKey hatched label="High/Critical" />
-              </div>
-            </div>
+            <CardHead
+              title="Recent activity"
+              trailing={<Link href="/campaigns" className="more-btn">All events →</Link>}
+            />
+            {recentActivity.length === 0 ? (
+              <EmptyHint text="Events will appear here as simulations run." />
+            ) : (
+              <ul className="flex flex-col">
+                {recentActivity.map((e) => (
+                  <li
+                    key={e.id}
+                    className="flex items-center gap-3 border-b border-line py-3 text-sm last:border-b-0"
+                  >
+                    <EventGlyph type={e.type} />
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-ink">
+                        <span className="font-semibold">{e.employee.name}</span>{" "}
+                        <span className="text-ink-2">{formatEventVerb(e.type)}</span>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs tabular-nums text-ink-3">
+                      {formatTimeAgo(e.createdAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
-
-          <TrackerCard>
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-white">Integration status</h3>
-            </div>
-            <div className="mt-3 mb-2 text-2xl font-bold tracking-tight">All systems nominal</div>
-            <div className="mb-5 text-[13px] text-[#cfe4d7]">LLM ✓ · Email ✓ · Voice ✓ · LMS ✓</div>
-            <div className="flex gap-2.5">
-              <Link
-                href="/settings"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-white text-green"
-                aria-label="Settings"
-              >
-                <SettingsGearIcon />
-              </Link>
-              <Link
-                href="/lms"
-                className="flex h-11 w-11 items-center justify-center rounded-full bg-rose text-white"
-                aria-label="LMS"
-              >
-                <PackageIcon className="h-4 w-4" strokeWidth={2.2} />
-              </Link>
-            </div>
-          </TrackerCard>
         </div>
       </PageBody>
     </>
@@ -326,69 +287,44 @@ export default async function DashboardPage() {
 
 /* ── Sub-components ───────────────────────────────────────────────── */
 
-function Card({
-  children,
-  className = "",
-  style,
-}: {
-  children: React.ReactNode;
-  className?: string;
-  style?: React.CSSProperties;
-}) {
-  return (
-    <div className={`panel flex flex-col p-6 ${className}`} style={style}>
-      {children}
-    </div>
-  );
+function Card({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return <div className={`panel flex flex-col p-6 ${className}`}>{children}</div>;
 }
 
-function CardHead({
-  title,
-  trailing,
-  titleClass = "",
-}: {
-  title: string;
-  trailing?: React.ReactNode;
-  titleClass?: string;
-}) {
+function CardHead({ title, trailing }: { title: string; trailing?: React.ReactNode }) {
   return (
     <div className="mb-4 flex items-center justify-between">
-      <h3 className={`text-[17px] font-bold ${titleClass || "text-ink"}`}>{title}</h3>
+      <h3 className="text-[17px] font-bold text-ink">{title}</h3>
       {trailing}
     </div>
   );
 }
 
-function MoreButton({ children }: { children: React.ReactNode }) {
-  return <button className="more-btn">{children}</button>;
-}
-
 function FeatureStat({
   label,
   value,
-  tag,
-  note,
+  delta,
+  sub,
 }: {
   label: string;
-  value: number | string;
-  tag: string;
-  note: string;
+  value: string | number;
+  delta: number;
+  sub: string;
 }) {
+  const TrendIcon = delta >= 0 ? TrendingUpIcon : TrendingDownIcon;
   return (
     <div className="panel p-6 text-white" style={{ background: "var(--green-active)" }}>
       <div className="mb-8 flex items-center justify-between">
         <div className="text-[15px] font-semibold">{label}</div>
-        <div className="flex h-8 w-8 items-center justify-center rounded-full" style={{ background: "rgba(255,255,255,0.18)" }}>
-          <ArrowUpRightIcon className="h-3.5 w-3.5 text-white" strokeWidth={2.2} />
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-full"
+          style={{ background: "rgba(255,255,255,0.18)" }}
+        >
+          <TrendIcon className="h-3.5 w-3.5 text-white" strokeWidth={2.2} />
         </div>
       </div>
       <div className="mb-3.5 text-[54px] font-bold leading-none tracking-tight tabular-nums">{value}</div>
-      <div className="flex items-center gap-1.5 text-xs text-[#cfe4d7]">
-        <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={{ background: "rgba(255,255,255,0.22)", color: "#fff" }}>
-          {tag}
-        </span>
-        {note}
-      </div>
+      <div className="text-xs text-[#cfe4d7]">{sub}</div>
     </div>
   );
 }
@@ -396,20 +332,16 @@ function FeatureStat({
 function Stat({
   label,
   value,
-  tag,
-  note,
-  tagTone = "green",
+  sub,
+  tone = "neutral",
 }: {
   label: string;
-  value: number | string;
-  tag: string;
-  note: string;
-  tagTone?: "green" | "rose";
+  value: string | number;
+  sub: string;
+  tone?: "neutral" | "rose" | "green";
 }) {
-  const tagStyle =
-    tagTone === "rose"
-      ? { background: "var(--rose-soft)", color: "var(--rose)" }
-      : { background: "var(--green-pill)", color: "var(--green)" };
+  const valueClass =
+    tone === "rose" ? "text-rose" : tone === "green" ? "text-green" : "text-ink";
   return (
     <div className="panel p-6">
       <div className="mb-8 flex items-center justify-between">
@@ -418,13 +350,10 @@ function Stat({
           <ArrowUpRightIcon className="h-3.5 w-3.5 text-ink" strokeWidth={2.2} />
         </div>
       </div>
-      <div className="mb-3.5 text-[54px] font-bold leading-none tracking-tight tabular-nums text-ink">{value}</div>
-      <div className="flex items-center gap-1.5 text-xs text-ink-2">
-        <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={tagStyle}>
-          {tag}
-        </span>
-        {note}
+      <div className={`mb-3.5 text-[54px] font-bold leading-none tracking-tight tabular-nums ${valueClass}`}>
+        {value}
       </div>
+      <div className="text-xs text-ink-3">{sub}</div>
     </div>
   );
 }
@@ -452,31 +381,26 @@ function Avatar({ name, band }: { name: string; band: string }) {
   );
 }
 
-function TemplateDot({ channel, category }: { channel: string; category: string }) {
-  let cls = "bg-green-soft text-green";
-  let Icon: React.ComponentType<{ className?: string }> = MailIcon;
-  if (channel === "voice") { cls = "bg-amber-soft text-amber"; Icon = PhoneIcon; }
-  else if (category === "blocked" || category === "policy") { cls = "bg-rose-soft text-rose"; Icon = StarIcon; }
+function EventGlyph({ type }: { type: string }) {
+  const map: Record<string, { Icon: React.ComponentType<{ className?: string }>; bg: string; fg: string }> = {
+    reported: { Icon: FlagIcon, bg: "var(--green-pill)", fg: "var(--green)" },
+    training_completed: { Icon: GraduationCapIcon, bg: "var(--green-pill)", fg: "var(--green)" },
+    clicked: { Icon: MousePointerClickIcon, bg: "var(--rose-soft)", fg: "var(--rose)" },
+    submitted: { Icon: ShieldCheckIcon, bg: "var(--rose-soft)", fg: "var(--rose)" },
+    opened: { Icon: MailOpenIcon, bg: "var(--amber-soft)", fg: "var(--amber)" },
+    sent: { Icon: MailOpenIcon, bg: "var(--page)", fg: "var(--ink-2)" },
+    call_answered: { Icon: PhoneCallIcon, bg: "var(--amber-soft)", fg: "var(--amber)" },
+    call_complied: { Icon: PhoneCallIcon, bg: "var(--rose-soft)", fg: "var(--rose)" },
+  };
+  const m = map[type] ?? map.sent;
+  const { Icon } = m;
   return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] ${cls}`}>
-      <Icon className="h-[18px] w-[18px]" />
+    <div
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+      style={{ background: m.bg, color: m.fg }}
+    >
+      <Icon className="h-4 w-4" />
     </div>
-  );
-}
-
-function LegendKey({ color, label, hatched }: { color?: string; label: string; hatched?: boolean }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span
-        className="inline-block h-2.5 w-2.5 rounded-full"
-        style={{
-          background: hatched
-            ? "repeating-linear-gradient(45deg,var(--line-2) 0 3px,#fff 3px 5px)"
-            : color,
-        }}
-      />
-      {label}
-    </span>
   );
 }
 
@@ -488,28 +412,20 @@ function EmptyHint({ text }: { text: string }) {
   );
 }
 
-function SettingsGearIcon() {
-  return (
-    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
-      <path d="M6 5h4v14H6zM14 5h4v14h-4z" />
-    </svg>
-  );
-}
-
 /* ── helpers ──────────────────────────────────────────────────────── */
 
-function arcPath(startFrac: number, endFrac: number) {
-  // Half-circle gauge: angle 180° → 0° as frac 0→1 (left to right along the arc).
-  const cx = 110;
-  const cy = 120;
-  const r = 90;
-  const a0 = Math.PI - startFrac * Math.PI;
-  const a1 = Math.PI - endFrac * Math.PI;
-  const x0 = cx + r * Math.cos(a0);
-  const y0 = cy - r * Math.sin(a0);
-  const x1 = cx + r * Math.cos(a1);
-  const y1 = cy - r * Math.sin(a1);
-  return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
+function formatEventVerb(type: string) {
+  const map: Record<string, string> = {
+    sent: "was sent a lure",
+    opened: "opened a lure",
+    clicked: "clicked a lure",
+    submitted: "submitted credentials",
+    reported: "reported a lure",
+    training_completed: "completed training",
+    call_answered: "answered a vishing call",
+    call_complied: "complied in a vishing call",
+  };
+  return map[type] ?? type.replaceAll("_", " ");
 }
 
 function parseTargets(json: string) {
@@ -519,10 +435,6 @@ function parseTargets(json: string) {
     if (parsed?.employeeIds && Array.isArray(parsed.employeeIds)) return parsed.employeeIds.length;
   } catch {}
   return "?";
-}
-
-function formatDate(d: Date) {
-  return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(d);
 }
 
 function formatDateLong(d: Date) {
@@ -536,6 +448,13 @@ function formatDateLong(d: Date) {
   }).format(d);
 }
 
-function formatShort(d: Date) {
-  return new Intl.DateTimeFormat("en-IN", { day: "2-digit", month: "short" }).format(d);
+function formatTimeAgo(d: Date) {
+  const diff = Date.now() - d.getTime();
+  const m = Math.floor(diff / 60_000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const days = Math.floor(h / 24);
+  return `${days}d ago`;
 }

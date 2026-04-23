@@ -40,6 +40,16 @@ export default async function RiskPage() {
     .map(([name, e]) => ({ name, avg: e.count ? e.sum / e.count : 0, ...e }))
     .sort((a, b) => b.avg - a.avg);
 
+  // Overall band counts for the distribution gauge
+  const bandTotals = {
+    low: employees.filter((e) => (e.riskScore?.band ?? "low") === "low").length,
+    medium: employees.filter((e) => (e.riskScore?.band ?? "low") === "medium").length,
+    high: employees.filter((e) => (e.riskScore?.band ?? "low") === "high").length,
+    critical: employees.filter((e) => (e.riskScore?.band ?? "low") === "critical").length,
+  };
+  const totalRanked = employees.length || 1;
+  const safePct = Math.round(((bandTotals.low + bandTotals.medium) / totalRanked) * 100);
+
   return (
     <>
       <PageHeader
@@ -47,6 +57,49 @@ export default async function RiskPage() {
         description="Behavior-weighted scores by person and department. Lower is better. Scores decay over a 45-day half-life."
       />
       <PageBody>
+        {/* Summary gauge + headline counts */}
+        <div className="grid gap-4 lg:grid-cols-[1fr_1.5fr]">
+          <div className="panel flex flex-col items-center p-6">
+            <p className="mb-2 self-start text-[15px] font-bold text-ink">Distribution</p>
+            <div className="relative h-[130px] w-[220px]">
+              <svg viewBox="0 0 220 130" width="220" height="130">
+                <path d="M 20 120 A 90 90 0 0 1 200 120" fill="none" stroke="var(--line)" strokeWidth="22" strokeLinecap="round" />
+                {totalRanked > 0 ? (
+                  <>
+                    <path
+                      d={arcPath(0, bandTotals.low / totalRanked)}
+                      fill="none" stroke="var(--green-active)" strokeWidth="22" strokeLinecap="round"
+                    />
+                    <path
+                      d={arcPath(bandTotals.low / totalRanked, (bandTotals.low + bandTotals.medium) / totalRanked)}
+                      fill="none" stroke="#4ca371" strokeWidth="22" strokeLinecap="round"
+                    />
+                  </>
+                ) : null}
+              </svg>
+              <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 text-center">
+                <div className="text-3xl font-bold tracking-tight text-ink">{safePct}%</div>
+                <div className="mt-0.5 text-[11px] font-medium tracking-wide text-ink-3">LOW/MEDIUM</div>
+              </div>
+            </div>
+            <div className="mt-4 flex gap-4 text-xs text-ink-2">
+              <LegendKey color="var(--green-active)" label="Low" />
+              <LegendKey color="#4ca371" label="Medium" />
+              <LegendKey hatched label="High/Critical" />
+            </div>
+          </div>
+
+          <div className="panel p-6">
+            <p className="mb-4 text-[15px] font-bold text-ink">Counts</p>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              <CountCell label="Low" count={bandTotals.low} tone="green" />
+              <CountCell label="Medium" count={bandTotals.medium} tone="green-soft" />
+              <CountCell label="High" count={bandTotals.high} tone="amber" />
+              <CountCell label="Critical" count={bandTotals.critical} tone="rose" />
+            </div>
+          </div>
+        </div>
+
         {/* Department cards */}
         <div>
           <p className="mb-3 px-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
@@ -176,4 +229,64 @@ function SegChip({ count, label, tone }: { count: number; label: string; tone: s
       {count} {label}
     </span>
   );
+}
+
+function CountCell({
+  label,
+  count,
+  tone,
+}: {
+  label: string;
+  count: number;
+  tone: "green" | "green-soft" | "amber" | "rose";
+}) {
+  const toneMap: Record<string, { dot: string; fg: string }> = {
+    green: { dot: "var(--green-active)", fg: "var(--green)" },
+    "green-soft": { dot: "#4ca371", fg: "var(--green)" },
+    amber: { dot: "var(--amber)", fg: "var(--amber)" },
+    rose: { dot: "var(--rose)", fg: "var(--rose)" },
+  };
+  const t = toneMap[tone];
+  return (
+    <div className="rounded-[14px] bg-page p-4">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-ink-3">
+        <span
+          className="inline-block h-2 w-2 rounded-full"
+          style={{ background: t.dot }}
+          aria-hidden="true"
+        />
+        {label}
+      </div>
+      <div className="mt-1.5 text-3xl font-bold tabular-nums" style={{ color: t.fg }}>
+        {count}
+      </div>
+    </div>
+  );
+}
+
+function LegendKey({ color, label, hatched }: { color?: string; label: string; hatched?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <span
+        className="inline-block h-2.5 w-2.5 rounded-full"
+        style={{
+          background: hatched
+            ? "repeating-linear-gradient(45deg,var(--line-2) 0 3px,#fff 3px 5px)"
+            : color,
+        }}
+      />
+      {label}
+    </span>
+  );
+}
+
+function arcPath(startFrac: number, endFrac: number) {
+  const cx = 110, cy = 120, r = 90;
+  const a0 = Math.PI - startFrac * Math.PI;
+  const a1 = Math.PI - endFrac * Math.PI;
+  const x0 = cx + r * Math.cos(a0);
+  const y0 = cy - r * Math.sin(a0);
+  const x1 = cx + r * Math.cos(a1);
+  const y1 = cy - r * Math.sin(a1);
+  return `M ${x0.toFixed(1)} ${y0.toFixed(1)} A ${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`;
 }

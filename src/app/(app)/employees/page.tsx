@@ -29,11 +29,9 @@ export default async function EmployeesPage() {
               <thead>
                 <tr className="border-b border-line text-left">
                   <Th>Name</Th>
-                  <Th>Email</Th>
                   <Th>Department</Th>
-                  <Th>Phone</Th>
-                  <Th>Consent</Th>
                   <Th>Risk</Th>
+                  <Th className="text-right">Consent</Th>
                 </tr>
               </thead>
               <tbody>
@@ -42,23 +40,16 @@ export default async function EmployeesPage() {
                   const band = e.riskScore?.band ?? "low";
                   return (
                     <tr key={e.id} className="border-b border-line last:border-b-0 transition-colors hover:bg-page">
-                      <Td className="font-semibold text-ink">{e.name}</Td>
-                      <Td className="text-ink-2">{e.email}</Td>
-                      <Td className="text-ink-2">{e.department || "—"}</Td>
-                      <Td className="font-mono text-xs text-ink-3">{e.phone || "—"}</Td>
                       <Td>
-                        {e.consent ? (
-                          <span className="inline-flex items-center rounded-full bg-green-pill px-2.5 py-1 text-xs font-semibold text-green">
-                            Given
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-page px-2.5 py-1 text-xs font-semibold text-ink-3">
-                            Pending
-                          </span>
-                        )}
+                        <div className="font-semibold text-ink">{e.name}</div>
+                        <div className="text-xs text-ink-3">{e.email}</div>
                       </Td>
+                      <Td className="text-ink-2">{e.department || "—"}</Td>
                       <Td>
                         <BandPill band={band} score={Math.round(score)} />
+                      </Td>
+                      <Td className="text-right">
+                        <ConsentDot given={e.consent} />
                       </Td>
                     </tr>
                   );
@@ -72,15 +63,31 @@ export default async function EmployeesPage() {
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
+function Th({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+    <th className={`px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3 ${className}`}>
       {children}
     </th>
   );
 }
 function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <td className={`px-5 py-4 ${className}`}>{children}</td>;
+}
+
+function ConsentDot({ given }: { given: boolean }) {
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 text-xs text-ink-3"
+      title={given ? "Consent given" : "Consent pending"}
+    >
+      <span
+        className="inline-block h-2 w-2 rounded-full"
+        style={{ background: given ? "var(--green)" : "var(--line-2)" }}
+        aria-hidden="true"
+      />
+      {given ? "Given" : "Pending"}
+    </span>
+  );
 }
 
 function EmptyState() {

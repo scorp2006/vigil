@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireOrg } from "@/lib/session";
+import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 
@@ -18,20 +19,6 @@ import {
   BellIcon,
 } from "lucide-react";
 
-const NAV_PRIMARY = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
-  { href: "/campaigns", label: "Campaigns", icon: SparklesIcon, badge: "6" },
-  { href: "/templates", label: "Templates", icon: BookOpenIcon },
-  { href: "/employees", label: "Employees", icon: UsersIcon },
-  { href: "/risk", label: "Risk", icon: ActivityIcon },
-];
-
-const NAV_SECONDARY = [
-  { href: "/lms", label: "LMS Bridge", icon: PhoneCallIcon },
-  { href: "/settings", label: "Settings", icon: SettingsIcon },
-  { href: "/ethics", label: "Help", icon: HelpCircleIcon },
-];
-
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const { org, session } = await requireOrg();
   const name = session.name || "Admin";
@@ -40,6 +27,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     .slice(0, 2)
     .map((s) => s[0]?.toUpperCase() ?? "")
     .join("") || "A";
+
+  // Live Campaigns badge — active + scheduled
+  const activeCampaigns = await db.campaign.count({
+    where: { orgId: org.id, status: { in: ["running", "scheduled"] } },
+  });
+
+  const navPrimary = [
+    { href: "/dashboard", label: "Dashboard", icon: LayoutDashboardIcon },
+    {
+      href: "/campaigns",
+      label: "Campaigns",
+      icon: SparklesIcon,
+      badge: activeCampaigns > 0 ? String(activeCampaigns) : undefined,
+    },
+    { href: "/employees", label: "Employees", icon: UsersIcon },
+    { href: "/risk", label: "Risk", icon: ActivityIcon },
+  ];
+
+  const navSecondary = [
+    { href: "/templates", label: "Templates", icon: BookOpenIcon },
+    { href: "/lms", label: "LMS Bridge", icon: PhoneCallIcon },
+    { href: "/settings", label: "Settings", icon: SettingsIcon },
+    { href: "/ethics", label: "Help", icon: HelpCircleIcon },
+  ];
 
   return (
     <div className="min-h-screen bg-page p-4">
@@ -56,8 +67,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
           {/* Nav */}
           <nav className="flex-1 overflow-y-auto">
-            <NavGroup label="Menu" items={NAV_PRIMARY} />
-            <NavGroup label="General" items={NAV_SECONDARY} />
+            <NavGroup label="Menu" items={navPrimary} />
+            <NavGroup label="General" items={navSecondary} />
             <SidebarLink href="/" icon={LogOutIcon} label="Logout" />
           </nav>
 
