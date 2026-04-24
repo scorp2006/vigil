@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
 import { bandFor, type RiskBand } from "@/lib/risk";
 import { SparklesIcon } from "lucide-react";
-import { RiskEmployeesTable, type RiskRow } from "./risk-employees-table";
+import { RiskEmployeesTable, type RiskEmployeeRow } from "./risk-employees-table";
 
 const SEG_COLOR: Record<string, string> = {
   critical: "bg-rose-soft text-rose",
@@ -41,24 +41,6 @@ export default async function RiskPage() {
     .map(([name, e]) => ({ name, avg: e.count ? e.sum / e.count : 0, ...e }))
     .sort((a, b) => b.avg - a.avg);
 
-  // Flatten employees into rows for the client table.
-  const employeeRows: RiskRow[] = employees.map((e) => {
-    let weak: string[] = [];
-    try {
-      const parsed = JSON.parse(e.riskScore?.weakAreas || "[]");
-      if (Array.isArray(parsed)) weak = parsed as string[];
-    } catch {}
-    return {
-      id: e.id,
-      name: e.name,
-      email: e.email,
-      department: e.department,
-      score: Math.round(e.riskScore?.score ?? 0),
-      band: e.riskScore?.band ?? "low",
-      weakAreas: weak,
-    };
-  });
-
   // Overall band counts for the distribution gauge
   const bandTotals = {
     low: employees.filter((e) => (e.riskScore?.band ?? "low") === "low").length,
@@ -68,6 +50,23 @@ export default async function RiskPage() {
   };
   const totalRanked = employees.length || 1;
   const safePct = Math.round(((bandTotals.low + bandTotals.medium) / totalRanked) * 100);
+
+  // Rows for the client-side filter table
+  const employeeRows: RiskEmployeeRow[] = employees.map((e) => ({
+    id: e.id,
+    name: e.name,
+    email: e.email,
+    department: e.department,
+    score: Math.round(e.riskScore?.score ?? 0),
+    band: e.riskScore?.band ?? "low",
+    weakAreas: (() => {
+      try {
+        return JSON.parse(e.riskScore?.weakAreas || "[]") as string[];
+      } catch {
+        return [];
+      }
+    })(),
+  }));
 
   return (
     <>
@@ -170,8 +169,8 @@ export default async function RiskPage() {
           </div>
         </div>
 
-        {/* Employee table — client-side filterable */}
-        <RiskEmployeesTable rows={employeeRows} />
+        {/* Employee table with filters */}
+        <RiskEmployeesTable employees={employeeRows} />
       </PageBody>
     </>
   );
