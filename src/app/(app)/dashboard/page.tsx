@@ -16,6 +16,7 @@ import {
   ShieldCheckIcon,
   TrendingUpIcon,
   TrendingDownIcon,
+  SparklesIcon,
 } from "lucide-react";
 
 export default async function DashboardPage() {
@@ -123,6 +124,15 @@ export default async function DashboardPage() {
       />
 
       <PageBody>
+        {/* ── AI insight strip ── */}
+        <AiInsight
+          reportRate={reportRate}
+          delta={reportRateDelta}
+          highRiskCount={highRiskCount}
+          highRiskPct={highRiskPct}
+          nextCampaignName={nextCampaign?.name}
+        />
+
         {/* ── ROW 1: Program health stats (3 cards, feature = report rate) ── */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Stat label="Employees" value={employeeCount} sub={`${totalRanked} ranked`} />
@@ -282,6 +292,49 @@ export default async function DashboardPage() {
         </div>
       </PageBody>
     </>
+  );
+}
+
+/* ── AI Insight ──────────────────────────────────────────────────── */
+
+function AiInsight({
+  reportRate,
+  delta,
+  highRiskCount,
+  highRiskPct,
+  nextCampaignName,
+}: {
+  reportRate: number;
+  delta: number;
+  highRiskCount: number;
+  highRiskPct: string;
+  nextCampaignName?: string;
+}) {
+  const insight = (() => {
+    if (reportRate >= 25 && delta >= 0) {
+      return `Your team's report rate (${reportRate}%) is strong${delta > 0 ? ` and trending up ${delta}pp` : ""}. The training muscle is working — keep alternating channels to avoid pattern fatigue.`;
+    }
+    if (delta < -3) {
+      return `Report rate dropped ${Math.abs(delta)}pp this month. ${highRiskCount} people are at high or critical risk (${highRiskPct}% of ranked). A coaching campaign in the worst department would lift the trend.`;
+    }
+    if (highRiskCount >= 5) {
+      return `${highRiskCount} employees are at high or critical risk (${highRiskPct}% of ranked). ${nextCampaignName ? `Once "${nextCampaignName}" runs, prioritise 1:1 nudges through the LMS Bridge.` : "Consider scheduling a targeted vishing wave next."}`;
+    }
+    return `Report rate is ${reportRate}% over 30 days (${delta >= 0 ? "+" : ""}${delta}pp vs prior month). ${nextCampaignName ? `"${nextCampaignName}" is queued — that will refresh the data here.` : "Schedule a fresh campaign to keep the pulse readable."}`;
+  })();
+
+  return (
+    <div className="panel flex items-start gap-3 p-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-pill text-green">
+        <SparklesIcon className="h-4 w-4" strokeWidth={2.2} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-green">
+          AI insight · today
+        </div>
+        <p className="text-sm leading-relaxed text-ink-2">{insight}</p>
+      </div>
+    </div>
   );
 }
 

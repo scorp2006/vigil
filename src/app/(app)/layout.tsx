@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
+import { AskVigilButton } from "@/components/ask-vigil";
 
 export const dynamic = "force-dynamic";
 
@@ -55,9 +56,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen bg-page p-4">
       <div className="grid gap-4 lg:grid-cols-[272px_1fr]">
-        {/* ── SIDEBAR PANEL ──────────────────────────────────────── */}
+        {/* Sidebar panel */}
         <aside className="panel sticky top-4 hidden h-[calc(100vh-2rem)] flex-col gap-7 px-[18px] py-6 lg:flex">
-          {/* Brand */}
           <div className="flex items-center gap-2.5 px-1.5 py-1">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green text-[18px] font-bold text-white">
               V
@@ -65,18 +65,22 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <div className="text-[22px] font-bold tracking-tight text-ink">Vigil</div>
           </div>
 
-          {/* Nav */}
           <nav className="flex-1 overflow-y-auto">
             <NavGroup label="Menu" items={navPrimary} />
             <NavGroup label="General" items={navSecondary} />
             <SidebarLink href="/" icon={LogOutIcon} label="Logout" />
           </nav>
 
-          {/* Promo / ethics callout */}
-          <div className="relative mt-auto overflow-hidden rounded-[18px] p-5 text-white"
-               style={{ background: "linear-gradient(145deg,#0a3d24 0%,#0a6034 50%,#0d7a3d 100%)" }}>
-            <div className="pointer-events-none absolute inset-0"
-                 style={{ background: "radial-gradient(circle at 80% 110%, rgba(255,255,255,0.22), transparent 40%)" }} />
+          <div
+            className="relative mt-auto overflow-hidden rounded-[18px] p-5 text-white"
+            style={{ background: "linear-gradient(145deg,#0a3d24 0%,#0a6034 50%,#0d7a3d 100%)" }}
+          >
+            <div
+              className="pointer-events-none absolute inset-0"
+              style={{
+                background: "radial-gradient(circle at 80% 110%, rgba(255,255,255,0.22), transparent 40%)",
+              }}
+            />
             <h5 className="relative mb-1 text-sm font-semibold">
               Ethical by <em className="not-italic font-normal text-[#cfe4d7]">default</em>
             </h5>
@@ -92,11 +96,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           </div>
         </aside>
 
-        {/* ── MAIN COLUMN ────────────────────────────────────────── */}
+        {/* Main column */}
         <main className="flex min-w-0 flex-col gap-4">
-          {/* Topbar */}
-          <div className="panel flex items-center gap-4 px-[22px] py-3.5">
-            <div className="flex max-w-[480px] flex-1 items-center gap-2.5 rounded-[12px] bg-page px-3.5 py-2.5 text-ink-3">
+          {/* Topbar — search anchored LEFT, AI + icons + profile pushed RIGHT */}
+          <div className="panel flex items-center gap-3 px-[22px] py-3">
+            <div className="flex w-full max-w-[420px] items-center gap-2.5 rounded-[12px] bg-page px-3.5 py-2.5 text-ink-3">
               <SearchIcon className="h-4 w-4" strokeWidth={1.8} />
               <input
                 placeholder="Search employees, campaigns, templates…"
@@ -106,24 +110,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 ⌘ F
               </span>
             </div>
-            <IconButton aria-label="Mail">
-              <MailIcon className="h-4 w-4" strokeWidth={1.6} />
-            </IconButton>
-            <IconButton aria-label="Notifications" hasDot>
-              <BellIcon className="h-4 w-4" strokeWidth={1.6} />
-            </IconButton>
-            <div className="ml-1 flex items-center gap-2.5 border-l border-line py-1 pl-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-soft text-sm font-semibold text-rose">
-                {initials}
-              </div>
-              <div className="leading-tight">
-                <div className="text-sm font-semibold text-ink">{name}</div>
-                <div className="text-xs text-ink-3">{session.email}</div>
+
+            {/* Right cluster — pushed by ml-auto */}
+            <div className="ml-auto flex items-center gap-2.5">
+              <AskVigilButton />
+              <IconButton aria-label="Mail">
+                <MailIcon className="h-4 w-4" strokeWidth={1.6} />
+              </IconButton>
+              <IconButton aria-label="Notifications" hasDot>
+                <BellIcon className="h-4 w-4" strokeWidth={1.6} />
+              </IconButton>
+              <div className="flex items-center gap-2.5 border-l border-line py-1 pl-3 ml-1">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-rose-soft text-sm font-semibold text-rose">
+                  {initials}
+                </div>
+                <div className="leading-tight">
+                  <div className="text-sm font-semibold text-ink">{name}</div>
+                  <div className="text-xs text-ink-3">{session.email}</div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Page content */}
           {children}
         </main>
       </div>
@@ -161,8 +169,6 @@ function SidebarLink({
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
 }) {
-  // Active styling is handled at the page level if needed.
-  // For now: hover state only (no client-side path detection in server component).
   return (
     <li>
       <Link

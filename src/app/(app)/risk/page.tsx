@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
 import { BandPill } from "@/components/vigil-ui";
 import { bandFor, type RiskBand } from "@/lib/risk";
+import { SparklesIcon } from "lucide-react";
 
 const SEG_COLOR: Record<string, string> = {
   critical: "bg-rose-soft text-rose",
@@ -99,6 +100,9 @@ export default async function RiskPage() {
             </div>
           </div>
         </div>
+
+        {/* AI explainer */}
+        {depts.length > 0 ? <DeptAiExplainer top={depts[0]} /> : null}
 
         {/* Department cards */}
         <div>
@@ -277,6 +281,35 @@ function LegendKey({ color, label, hatched }: { color?: string; label: string; h
       />
       {label}
     </span>
+  );
+}
+
+function DeptAiExplainer({
+  top,
+}: {
+  top: { name: string; avg: number; count: number; critical: number; high: number; medium: number; low: number };
+}) {
+  const verdict =
+    top.critical > 0
+      ? `${top.critical} ${top.critical === 1 ? "person" : "people"} crossed the critical threshold — likely repeat-clickers or recent credential submitters. They need direct coaching, not another email.`
+      : top.high > 0
+        ? `${top.high} ${top.high === 1 ? "person sits" : "people sit"} in the high band, often clickers who haven't completed training yet. A short LMS nudge usually moves them down within 30 days.`
+        : `Spread is mostly low/medium. A vishing wave on this team would surface the next real-risk individuals.`;
+
+  return (
+    <div className="panel flex items-start gap-3 p-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-pill text-green">
+        <SparklesIcon className="h-4 w-4" strokeWidth={2.2} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-green">
+          AI insight · highest-risk team
+        </div>
+        <p className="text-sm leading-relaxed text-ink-2">
+          <strong className="font-semibold text-ink">{top.name}</strong> averages {top.avg.toFixed(1)} across {top.count} employees. {verdict}
+        </p>
+      </div>
+    </div>
   );
 }
 
