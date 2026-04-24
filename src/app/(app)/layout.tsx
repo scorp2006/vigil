@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { AskVigilButton } from "@/components/ask-vigil";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +115,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             {/* Right cluster — pushed by ml-auto */}
             <div className="ml-auto flex items-center gap-2.5">
               <AskVigilButton />
+              <ThemeToggle />
               <IconButton aria-label="Mail">
                 <MailIcon className="h-4 w-4" strokeWidth={1.6} />
               </IconButton>
