@@ -1,9 +1,9 @@
 import { requireOrg } from "@/lib/session";
 import { db } from "@/lib/db";
 import { PageHeader, PageBody } from "@/components/page-header";
-import { BandPill } from "@/components/vigil-ui";
 import { bandFor, type RiskBand } from "@/lib/risk";
 import { SparklesIcon } from "lucide-react";
+import { RiskEmployeesTable, type RiskRow } from "./risk-employees-table";
 
 const SEG_COLOR: Record<string, string> = {
   critical: "bg-rose-soft text-rose",
@@ -40,6 +40,24 @@ export default async function RiskPage() {
   const depts = Array.from(byDept.entries())
     .map(([name, e]) => ({ name, avg: e.count ? e.sum / e.count : 0, ...e }))
     .sort((a, b) => b.avg - a.avg);
+
+  // Flatten employees into rows for the client table.
+  const employeeRows: RiskRow[] = employees.map((e) => {
+    let weak: string[] = [];
+    try {
+      const parsed = JSON.parse(e.riskScore?.weakAreas || "[]");
+      if (Array.isArray(parsed)) weak = parsed as string[];
+    } catch {}
+    return {
+      id: e.id,
+      name: e.name,
+      email: e.email,
+      department: e.department,
+      score: Math.round(e.riskScore?.score ?? 0),
+      band: e.riskScore?.band ?? "low",
+      weakAreas: weak,
+    };
+  });
 
   // Overall band counts for the distribution gauge
   const bandTotals = {
@@ -152,78 +170,11 @@ export default async function RiskPage() {
           </div>
         </div>
 
-        {/* Employee table */}
-        <div className="panel overflow-hidden">
-          <div className="border-b border-line px-5 py-4">
-            <p className="text-[17px] font-bold text-ink">All employees</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line text-left">
-                  <Th>Employee</Th>
-                  <Th>Department</Th>
-                  <Th>Score</Th>
-                  <Th>Band</Th>
-                  <Th>Weak areas</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((e) => {
-                  const score = Math.round(e.riskScore?.score ?? 0);
-                  const band = e.riskScore?.band ?? "low";
-                  const weak: string[] = (() => {
-                    try {
-                      return JSON.parse(e.riskScore?.weakAreas || "[]") as string[];
-                    } catch {
-                      return [];
-                    }
-                  })();
-                  return (
-                    <tr key={e.id} className="border-b border-line last:border-b-0 transition-colors hover:bg-page">
-                      <Td>
-                        <p className="font-semibold text-ink">{e.name}</p>
-                        <p className="text-xs text-ink-3">{e.email}</p>
-                      </Td>
-                      <Td className="text-ink-2">{e.department || "—"}</Td>
-                      <Td className="font-mono tabular-nums text-ink">{score}</Td>
-                      <Td>
-                        <BandPill band={band} />
-                      </Td>
-                      <Td>
-                        <div className="flex flex-wrap gap-1">
-                          {weak.length === 0 ? (
-                            <span className="text-xs text-ink-3">—</span>
-                          ) : (
-                            weak.slice(0, 3).map((w) => (
-                              <span key={w} className="rounded-full bg-page px-2.5 py-0.5 text-xs text-ink-2">
-                                {w.replaceAll("_", " ")}
-                              </span>
-                            ))
-                          )}
-                        </div>
-                      </Td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        {/* Employee table — client-side filterable */}
+        <RiskEmployeesTable rows={employeeRows} />
       </PageBody>
     </>
   );
-}
-
-function Th({ children }: { children: React.ReactNode }) {
-  return (
-    <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
-      {children}
-    </th>
-  );
-}
-function Td({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-  return <td className={`px-5 py-4 ${className}`}>{children}</td>;
 }
 
 function SegChip({ count, label, tone }: { count: number; label: string; tone: string }) {
